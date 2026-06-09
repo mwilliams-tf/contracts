@@ -1,0 +1,92 @@
+[
+  {
+    "id": "src-001",
+    "contractId": "ctr-001",
+    "kind": "mail",
+    "sender": "acme.legal@example.com",
+    "date": "2026-02-25",
+    "subject": "Cláusula de vencimiento y renovación",
+    "excerpt": "El contrato vence el 01/03/2026 con renovación automática salvo aviso con 60 días de anticipación.",
+    "simulatedLink": "#/sim/mail/src-001"
+  },
+  {
+    "id": "src-002",
+    "contractId": "ctr-001",
+    "kind": "mail",
+    "sender": "maria.lopez@banco.example",
+    "date": "2026-03-02",
+    "subject": "Actualización de vencimiento",
+    "excerpt": "Confirmamos vencimiento al 01/03/2027; firma del Banco pendiente.",
+    "simulatedLink": "#/sim/mail/src-002"
+  },
+  {
+    "id": "src-003",
+    "contractId": "ctr-002",
+    "kind": "mail",
+    "sender": "seguridad.total@example.com",
+    "date": "2026-01-20",
+    "subject": "Confirmación de firmantes",
+    "excerpt": "Ambas partes han firmado. Vigencia hasta el 15/01/2028.",
+    "simulatedLink": "#/sim/mail/src-003"
+  },
+  {
+    "id": "src-004",
+    "contractId": "ctr-003",
+    "kind": "nota",
+    "sender": "legales@banco.example",
+    "date": "2025-06-10",
+    "subject": "Cierre de contrato",
+    "excerpt": "Contrato cerrado por vencimiento sin renovación.",
+    "simulatedLink": "#/sim/nota/src-004"
+  },
+  {
+    "id": "src-005",
+    "contractId": "ctr-004",
+    "kind": "mail",
+    "sender": "datasys@example.com",
+    "date": "2026-04-05",
+    "subject": "Cláusula de penalidad por demora",
+    "excerpt": "La cláusula 8.2 establece penalidad del 0,5% diario por demora en la firma, con tope del 10%.",
+    "simulatedLink": "#/sim/mail/src-005"
+  },
+  {
+    "id": "src-006",
+    "contractId": "ctr-006",
+    "kind": "mail",
+    "sender": "legales@banco.example",
+    "date": "2026-06-03",
+    "subject": "Envío de borrador a proveedor — Contrato Stanley",
+    "excerpt": "Adjuntamos borrador v2 del contrato de Servicios IT para revisión de Stanley Tech. Plazo de respuesta: 5 días hábiles.",
+    "simulatedLink": "#/sim/mail/src-006"
+  },
+  {
+    "id": "src-007",
+    "contractId": "ctr-006",
+    "kind": "mail",
+    "sender": "stanley@stanley.com",
+    "date": "2026-06-05",
+    "subject": "Rechazo parcial — cláusula de limitación de responsabilidad",
+    "excerpt": "Stanley Tech no está de acuerdo con la cláusula 9 (limitación de responsabilidad). Consideran que el tope del 10% del fee anual no cubre daños indirectos ni lucro cesante en un servicio crítico de infraestructura, y que la exclusión de responsabilidad por datos alojados en sus servidores es demasiado amplia. Solicitamos revisión antes de continuar con la firma.",
+    "simulatedLink": "#/sim/mail/src-007"
+  },
+  {
+    "id": "src-008",
+    "contractId": "ctr-006",
+    "kind": "mail",
+    "sender": "maria.lopez@banco.example",
+    "date": "2026-06-06",
+    "subject": "RE: Rechazo parcial — evaluación Legales",
+    "excerpt": "Legales evalúa contrapropuesta sobre limitación de responsabilidad. Se recomienda volver el expediente a Revisión de legales hasta definir redacción.",
+    "simulatedLink": "#/sim/mail/src-008"
+  },
+  {
+    "id": "src-009",
+    "contractId": "ctr-006",
+    "kind": "documento",
+    "sender": "Repositorio CLM",
+    "date": "2026-06-03",
+    "subject": "Borrador v2 — Cláusula 13 Terminación de la vigencia",
+    "excerpt": "Terminación de la vigencia del Contrato. La vigencia finalizará en los supuestos 13.1 a 13.7 (plazo, incumplimiento, fuerza mayor, rescisión unilateral del Cliente, entre otros).",
+    "simulatedLink": "#/contratos/ctr-006/repositorio"
+  }
+]

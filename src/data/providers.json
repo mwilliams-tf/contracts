@@ -1,0 +1,32 @@
+[
+  {
+    "id": "prov-001",
+    "name": "Acme Cloud S.A.",
+    "taxId": "30-11111111-1",
+    "service": "Servicios IT"
+  },
+  {
+    "id": "prov-002",
+    "name": "Seguridad Total S.R.L.",
+    "taxId": "30-22222222-2",
+    "service": "Servicios de seguridad"
+  },
+  {
+    "id": "prov-003",
+    "name": "DataSys Consulting",
+    "taxId": "30-33333333-3",
+    "service": "Servicios IT"
+  },
+  {
+    "id": "prov-004",
+    "name": "Inmobiliaria Quilmes S.A.",
+    "taxId": "30-44444444-4",
+    "service": "Locación"
+  },
+  {
+    "id": "prov-005",
+    "name": "Stanley Tech S.A.",
+    "taxId": "30-55555555-5",
+    "service": "Servicios IT"
+  }
+]

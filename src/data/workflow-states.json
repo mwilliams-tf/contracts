@@ -1,0 +1,10 @@
+[
+  { "id": "st-solicitado", "name": "Solicitado", "order": 1, "active": true },
+  { "id": "st-rechazado", "name": "Rechazado", "order": 2, "active": false },
+  { "id": "st-rev-legales", "name": "Revisión de legales", "order": 3, "active": true },
+  { "id": "st-rev-solicitante", "name": "Revisión del área solicitante", "order": 4, "active": true },
+  { "id": "st-rev-proveedor", "name": "Revisión del proveedor", "order": 5, "active": true },
+  { "id": "st-rev-legales-final", "name": "Revisión legales final", "order": 6, "active": true },
+  { "id": "st-pendiente-firma", "name": "Pendiente de firma", "order": 7, "active": true },
+  { "id": "st-finalizado", "name": "Finalizado", "order": 8, "active": false }
+]

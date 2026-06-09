@@ -1,0 +1,42 @@
+[
+  {
+    "id": "doc-001",
+    "contractId": "ctr-001",
+    "title": "Contrato marco Acme (borrador v3)",
+    "type": "Contrato",
+    "date": "2026-02-28",
+    "simulatedLink": "#/sim/doc/doc-001"
+  },
+  {
+    "id": "doc-002",
+    "contractId": "ctr-001",
+    "title": "Anexo de niveles de servicio (SLA)",
+    "type": "Anexo",
+    "date": "2026-02-25",
+    "simulatedLink": "#/sim/doc/doc-002"
+  },
+  {
+    "id": "doc-003",
+    "contractId": "ctr-002",
+    "title": "Contrato de monitoreo — Plantilla Banco v2",
+    "type": "Contrato",
+    "date": "2026-01-10",
+    "simulatedLink": "#/sim/doc/doc-003"
+  },
+  {
+    "id": "doc-004",
+    "contractId": "ctr-003",
+    "title": "Contrato de mantenimiento legacy (firmado)",
+    "type": "Contrato",
+    "date": "2023-06-15",
+    "simulatedLink": "#/sim/doc/doc-004"
+  },
+  {
+    "id": "doc-005",
+    "contractId": "ctr-006",
+    "title": "Contrato Servicios IT — Stanley (borrador v2)",
+    "type": "Contrato",
+    "date": "2026-06-03",
+    "simulatedLink": "#/contratos/ctr-006/repositorio"
+  }
+]

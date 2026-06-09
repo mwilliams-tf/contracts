@@ -1,0 +1,161 @@
+{
+  "fallback": {
+    "text": "No tengo un escenario preparado para esa consulta en el prototipo. Probá preguntar por el estado, los mails o el vencimiento de los contratos Stanley o Acme, o reformulá mencionando el proveedor."
+  },
+  "scenarios": [
+    {
+      "id": "stanley-estado",
+      "contractIds": ["ctr-006"],
+      "match": {
+        "anyKeywords": ["stanley", "estado", "situacion", "situación", "como esta", "cómo está", "en que esta", "en qué está"],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "text": "El contrato «Contrato Servicios IT — Stanley» (Stanley Tech S.A.) figura en estado «Revisión del proveedor».\n\nImportante: en esta etapa el proveedor responde por mail u otro canal externo; el área solicitante (Compras) registra esa respuesta en el CLM.\n\nÚltima novedad: mail de stanley@stanley.com (05/06/2026) — no están de acuerdo con la cláusula 9 (limitación de responsabilidad) y solicitan revisión antes de continuar.\n\nResponsable interno del expediente: área solicitante (Compras).",
+        "citationSourceIds": ["src-007", "src-008"]
+      }
+    },
+    {
+      "id": "stanley-clausula-9",
+      "contractIds": ["ctr-006"],
+      "match": {
+        "anyKeywords": [
+          "stanley",
+          "clausula",
+          "cláusula",
+          "clausula 9",
+          "cláusula 9",
+          "limitacion",
+          "limitación",
+          "responsabilidad",
+          "por que",
+          "por qué",
+          "porque",
+          "de acuerdo",
+          "motivo",
+          "detalle",
+          "objecion",
+          "objeción",
+          "desacuerdo",
+          "no estan de acuerdo",
+          "no están de acuerdo"
+        ],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "text": "Objeción del proveedor — Cláusula 9 (Contrato Stanley):\n\nSegún el mail de stanley@stanley.com (05/06/2026), Stanley Tech no acepta la redacción actual de limitación de responsabilidad porque:\n\n• Consideran que el tope del 10% del fee anual es insuficiente para un servicio crítico de infraestructura IT.\n• Sostienen que no cubre daños indirectos ni lucro cesante ante indisponibilidad prolongada.\n• Cuestionan que la exclusión de responsabilidad por datos alojados en sus servidores resulta demasiado amplia a favor del Banco.\n\nNo rechazan el contrato en su totalidad: piden revisión de la cláusula 9 antes de avanzar a firma.\n\nLegales puede evaluar contrapropuesta (p. ej. subir el tope, acotar exclusiones o carve-out para datos personales) y registrar la decisión en el CLM.",
+        "citationSourceIds": ["src-007"]
+      }
+    },
+    {
+      "id": "stanley-rescision",
+      "contractIds": ["ctr-006"],
+      "match": {
+        "anyKeywords": [
+          "stanley",
+          "resicion",
+          "recision",
+          "rescisión",
+          "terminacion",
+          "terminación",
+          "causales",
+          "clausula 13",
+          "cláusula 13",
+          "vigencia del contrato",
+          "finalizar",
+          "supuestos"
+        ],
+        "allKeywords": ["causales"],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "textTemplate": "stanley-clause-13-rescision",
+        "citationSourceIds": ["src-009"]
+      }
+    },
+    {
+      "id": "stanley-recomendacion",
+      "contractIds": ["ctr-006"],
+      "match": {
+        "anyKeywords": ["stanley", "recomend", "que hacemos", "qué hacemos", "siguiente paso", "objecion", "objeción", "limitacion", "limitación", "responsabilidad", "cambiar estado", "transicion", "transición"],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "text": "Recomendación — Contrato Stanley:\n\nAnte la objeción del proveedor sobre la cláusula 9 (limitación de responsabilidad), Compras debe registrar la respuesta externa con «Registrar objeción o cambios del proveedor» para devolver el expediente a Legales.\n\nFundamento: mail stanley@stanley.com (05/06/2026) y nota interna de María López (06/06/2026).\n\nSiguiente paso esperado: Legales ajusta el borrador y lo reenvía al área solicitante; Compras aprueba y vuelve a enviar al proveedor, o devuelve a Legales si hace falta otra revisión.\n\nAlternativa: si el proveedor hubiera aceptado el borrador, Compras usaría «Registrar conformidad del proveedor» → Legales revisión final → pendiente de firma.",
+        "citationSourceIds": ["src-007", "src-008", "src-006"]
+      }
+    },
+    {
+      "id": "stanley-mails",
+      "contractIds": ["ctr-006"],
+      "match": {
+        "anyKeywords": ["stanley", "mail", "mails", "correo", "correos", "intercambio", "proveedor", "comunicacion", "comunicación", "hilo"],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "text": "Intercambio registrado — Contrato Stanley:\n\n1. 03/06/2026 — legales@banco.example → Envío de borrador v2 a Stanley Tech (plazo de respuesta: 5 días hábiles).\n\n2. 05/06/2026 — stanley@stanley.com → Rechazo parcial de la cláusula 9: objeción al tope del 10% del fee, daños indirectos y alcance de exclusión por datos en sus servidores.\n\n3. 06/06/2026 — maria.lopez@banco.example → Legales evalúa contrapropuesta.\n\nEl CLM permanece en «Revisión del proveedor» hasta que Compras registre la respuesta del proveedor: objeción o cambios → Legales; conformidad → revisión legales final y firma.",
+        "citationSourceIds": ["src-006", "src-007", "src-008"]
+      }
+    },
+    {
+      "id": "stanley-vencimiento",
+      "contractIds": ["ctr-006"],
+      "match": {
+        "anyKeywords": ["stanley", "vence", "vencimiento", "termina", "finaliza", "plazo", "duracion", "duración", "cuando termina", "cuándo termina"],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "text": "Contrato Stanley — fechas en el CLM:\n\n• Inicio: 01/07/2026\n• Vencimiento: 30/06/2027\n\nEl expediente sigue en «Revisión del proveedor» a cargo del área solicitante (Compras debe registrar la respuesta externa del proveedor). La objeción sobre limitación de responsabilidad no modifica estas fechas comerciales, pero conviene resolver la revisión legal antes del inicio previsto.",
+        "citationSourceIds": ["src-007"]
+      }
+    },
+    {
+      "id": "acme-estado",
+      "contractIds": ["ctr-001"],
+      "match": {
+        "anyKeywords": ["acme", "estado", "situacion", "situación", "como esta", "cómo está", "en que esta", "en qué está"],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "text": "El contrato «Contrato de servicios cloud — Acme» (Acme Cloud S.A.) está en «Pendiente de firma».\n\nRecorrió Solicitado → Revisión de legales → Revisión del área solicitante → Revisión del proveedor → Revisión legales final. Desde el 01/03/2026 aguarda firma del Banco.\n\nÚltima observación: «A la espera de firma del Banco — Compras gestiona». Carlos Acme (proveedor) figura firmado; María López (Banco) pendiente.",
+        "citationSourceIds": ["src-002"]
+      }
+    },
+    {
+      "id": "acme-vencimiento",
+      "contractIds": ["ctr-001"],
+      "match": {
+        "anyKeywords": ["acme", "vence", "vencimiento", "termina", "finaliza", "renovacion", "renovación", "plazo", "cuando termina", "cuándo termina", "vigencia"],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "text": "Vencimiento — Contrato Acme:\n\n• CLM: 01/03/2027\n• Mail más reciente (02/03/2026, María López): confirma vencimiento al 01/03/2027; firma del Banco pendiente.\n• Mail anterior del proveedor (25/02/2026) mencionaba 01/03/2026 — prevalece la fuente más reciente.\n\nRecomendación: priorizar cierre de firma interna (Compras) dado el estado Pendiente de firma.",
+        "citationSourceIds": ["src-002", "src-001"]
+      }
+    },
+    {
+      "id": "acme-firmantes",
+      "contractIds": ["ctr-001"],
+      "match": {
+        "anyKeywords": ["acme", "firma", "firmante", "firmantes", "firmado", "apoderado", "apoderada", "quien falta", "quién falta"],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "text": "Firmantes — Contrato Acme:\n\n• Carlos Acme (Apoderado Proveedor) — firmado\n• María López (Apoderada Banco) — pendiente\n\nEstado: Pendiente de firma. Compras gestiona el registro del PDF firmado en el CLM.",
+        "citationSourceIds": ["src-002"]
+      }
+    },
+    {
+      "id": "acme-mails",
+      "contractIds": ["ctr-001"],
+      "match": {
+        "anyKeywords": ["acme", "mail", "mails", "correo", "renovacion", "renovación", "vencimiento", "intercambio"],
+        "minKeywordHits": 2
+      },
+      "response": {
+        "text": "Mails relevantes — Contrato Acme:\n\n1. 25/02/2026 — acme.legal@example.com: vencimiento con renovación automática (menciona 01/03/2026).\n\n2. 02/03/2026 — maria.lopez@banco.example: confirma vencimiento al 01/03/2027 y firma del Banco pendiente.\n\nPara vencimiento, prevalece el mail más reciente (marzo 2027).",
+        "citationSourceIds": ["src-001", "src-002"]
+      }
+    }
+  ]
+}

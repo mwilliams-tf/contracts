@@ -1,0 +1,127 @@
+[
+  {
+    "id": "ctr-001",
+    "title": "Contrato de servicios cloud — Acme",
+    "service": "Servicios IT",
+    "providerId": "prov-001",
+    "requestingArea": "IT",
+    "stateId": "st-pendiente-firma",
+    "documentOrigin": "ModeloDelProveedor",
+    "parties": ["Banco XYZ", "Acme Cloud S.A."],
+    "signatories": [
+      { "name": "María López", "role": "Apoderada Banco", "signed": false },
+      { "name": "Carlos Acme", "role": "Apoderado Proveedor", "signed": true }
+    ],
+    "startDate": "2026-03-01",
+    "signatureDate": null,
+    "expirationDate": "2027-03-01",
+    "documentIds": ["doc-001", "doc-002"],
+    "sourceIds": ["src-001", "src-002"],
+    "stateHistory": [
+      { "stateId": "st-solicitado", "date": "2026-02-10" },
+      { "stateId": "st-rev-legales", "date": "2026-02-12", "note": "Legales aceptó la solicitud" },
+      { "stateId": "st-rev-solicitante", "date": "2026-02-18" },
+      { "stateId": "st-rev-proveedor", "date": "2026-02-22" },
+      { "stateId": "st-rev-legales-final", "date": "2026-02-25" },
+      { "stateId": "st-pendiente-firma", "date": "2026-03-01", "note": "A la espera de firma del Banco — Compras gestiona" }
+    ]
+  },
+  {
+    "id": "ctr-002",
+    "title": "Contrato de monitoreo perimetral",
+    "service": "Servicios de seguridad",
+    "providerId": "prov-002",
+    "requestingArea": "Marketing",
+    "stateId": "st-finalizado",
+    "documentOrigin": "PlantillaPropia",
+    "parties": ["Banco XYZ", "Seguridad Total S.R.L."],
+    "signatories": [
+      { "name": "María López", "role": "Apoderada Banco", "signed": true },
+      { "name": "Roberto Sánchez", "role": "Apoderado Proveedor", "signed": true }
+    ],
+    "startDate": "2026-01-15",
+    "signatureDate": "2026-02-01",
+    "expirationDate": "2028-01-15",
+    "documentIds": ["doc-003"],
+    "sourceIds": ["src-003"],
+    "stateHistory": [
+      { "stateId": "st-solicitado", "date": "2025-12-01" },
+      { "stateId": "st-rev-legales", "date": "2025-12-10" },
+      { "stateId": "st-rev-solicitante", "date": "2025-12-20" },
+      { "stateId": "st-rev-proveedor", "date": "2026-01-05" },
+      { "stateId": "st-rev-legales-final", "date": "2026-01-10" },
+      { "stateId": "st-pendiente-firma", "date": "2026-01-12" },
+      { "stateId": "st-finalizado", "date": "2026-02-01", "note": "PDF firmado cargado por Compras" }
+    ]
+  },
+  {
+    "id": "ctr-003",
+    "title": "Mantenimiento de infraestructura legacy",
+    "service": "Servicios IT",
+    "providerId": "prov-003",
+    "requestingArea": "IT",
+    "stateId": "st-finalizado",
+    "documentOrigin": "PlantillaPropia",
+    "parties": ["Banco XYZ", "DataSys Consulting"],
+    "signatories": [
+      { "name": "María López", "role": "Apoderada Banco", "signed": true },
+      { "name": "Laura DataSys", "role": "Apoderado Proveedor", "signed": true }
+    ],
+    "startDate": "2023-06-01",
+    "signatureDate": "2023-06-15",
+    "expirationDate": "2025-06-01",
+    "documentIds": ["doc-004"],
+    "sourceIds": ["src-004"],
+    "stateHistory": [
+      { "stateId": "st-solicitado", "date": "2023-05-01" },
+      { "stateId": "st-rev-legales", "date": "2023-05-15" },
+      { "stateId": "st-finalizado", "date": "2025-06-15", "note": "Renovación no solicitada — contrato cerrado" }
+    ]
+  },
+  {
+    "id": "ctr-004",
+    "title": "Licencias de software de oficina",
+    "service": "Servicios IT",
+    "providerId": "prov-003",
+    "requestingArea": "Marketing",
+    "stateId": "st-pendiente-firma",
+    "documentOrigin": "ModeloDelProveedor",
+    "parties": ["Banco XYZ", "DataSys Consulting"],
+    "signatories": [
+      { "name": "María López", "role": "Apoderada Banco", "signed": false },
+      { "name": "Laura DataSys", "role": "Apoderado Proveedor", "signed": false }
+    ],
+    "startDate": "2026-04-01",
+    "signatureDate": null,
+    "expirationDate": "2026-03-01",
+    "documentIds": [],
+    "sourceIds": ["src-005"],
+    "stateHistory": [
+      { "stateId": "st-solicitado", "date": "2026-03-15" },
+      { "stateId": "st-rev-legales", "date": "2026-03-20" },
+      { "stateId": "st-rev-solicitante", "date": "2026-03-25" },
+      { "stateId": "st-rev-proveedor", "date": "2026-03-28" },
+      { "stateId": "st-rev-legales-final", "date": "2026-03-30" },
+      { "stateId": "st-pendiente-firma", "date": "2026-04-01", "note": "Vencimiento próximo — revisión urgente" }
+    ]
+  },
+  {
+    "id": "ctr-005",
+    "title": "Renovación alquiler sucursal Quilmes",
+    "service": "Locación",
+    "providerId": "prov-004",
+    "requestingArea": "Compras",
+    "stateId": "st-solicitado",
+    "documentOrigin": "ModeloDelProveedor",
+    "parties": ["Banco XYZ", "Inmobiliaria Quilmes S.A."],
+    "signatories": [],
+    "startDate": "2026-06-01",
+    "signatureDate": null,
+    "expirationDate": "2028-05-31",
+    "documentIds": [],
+    "sourceIds": [],
+    "stateHistory": [
+      { "stateId": "st-solicitado", "date": "2026-06-05", "note": "Compras — modelo de contrato adjunto" }
+    ]
+  }
+]

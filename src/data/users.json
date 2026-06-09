@@ -1,0 +1,9 @@
+[
+  { "id": "u-ana", "name": "Ana Pérez", "role": "abogada", "area": "Legales" },
+  { "id": "u-lucia", "name": "Lucía Martínez", "role": "abogada", "area": "Legales" },
+  { "id": "u-juan", "name": "Juan Díaz", "role": "solicitante", "area": "IT" },
+  { "id": "u-sofia", "name": "Sofía Ramírez", "role": "solicitante", "area": "Marketing" },
+  { "id": "u-maria", "name": "María González", "role": "solicitante", "area": "Compras" },
+  { "id": "u-carlos", "name": "Carlos Acme", "role": "proveedor", "area": "Acme Cloud S.A.", "providerId": "prov-001" },
+  { "id": "u-patricia", "name": "Patricia Ruiz", "role": "proveedor", "area": "Inmobiliaria Quilmes", "providerId": "prov-004" }
+]
