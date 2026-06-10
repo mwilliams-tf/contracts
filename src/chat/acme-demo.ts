@@ -1,5 +1,5 @@
 import type { ChatAnswer, ChatContext, Citation, Source } from "../models";
-import { detectIntent } from "./engine";
+import { detectIntent, finalizeAnswer, toCitation } from "./engine";
 
 /** Guion demo Acme — prioridad fija cuando la conversación es sobre Acme */
 export type AcmeDemoQuestionId =
@@ -55,6 +55,10 @@ export function mentionsAcme(text: string): boolean {
 }
 
 export function resolveAcmeContractId(ctx: ChatContext): string {
+  if (ctx.focusContractId) {
+    const focus = ctx.corpus.contracts.find((c) => c.id === ctx.focusContractId);
+    if (focus && normalize(focus.provider.name).includes("acme")) return focus.id;
+  }
   const contract = ctx.corpus.contracts.find(
     (c) =>
       normalize(c.provider.name).includes("acme") || normalize(c.title).includes("acme"),
@@ -66,16 +70,21 @@ function resolveCitations(sourceIds: string[], ctx: ChatContext): Citation[] {
   return sourceIds
     .map((id) => ctx.corpus.sources.find((s) => s.id === id))
     .filter((s): s is Source => Boolean(s))
-    .map((source) => ({
-      sourceId: source.id,
-      sender: source.sender,
-      date: source.date,
-      subject: source.subject,
-      simulatedLink: source.simulatedLink,
-    }));
+    .map(toCitation);
 }
 
 export function isAcmeConversation(query: string, ctx: ChatContext): boolean {
+  if (ctx.conversationType === "anchored" && ctx.focusContractId) {
+    const focus = ctx.corpus.contracts.find((c) => c.id === ctx.focusContractId);
+    if (
+      focus &&
+      (normalize(focus.provider.name).includes("acme") ||
+        normalize(focus.title).includes("acme"))
+    ) {
+      return true;
+    }
+  }
+
   const cq = normalize(query);
   const sq = normalize(buildSearchText(query, ctx));
   if (cq.includes("stanley")) return false;
@@ -129,11 +138,17 @@ export function tryAcmeDemoAnswer(query: string, ctx: ChatContext): ChatAnswer |
   if (!questionId) return null;
 
   const scripted = ACME_RESPONSES[questionId];
+  const acmeId = resolveAcmeContractId(ctx);
 
-  return {
-    text: scripted.text,
-    citations: resolveCitations(scripted.citationSourceIds, ctx),
-    matchedContractIds: [resolveAcmeContractId(ctx)],
-    intent: detectIntent(query, ctx.priorMessages),
-  };
+  return finalizeAnswer(
+    {
+      text: scripted.text,
+      citations: resolveCitations(scripted.citationSourceIds, ctx),
+      matchedContractIds: [acmeId],
+      intent: detectIntent(query, ctx.priorMessages),
+      principalContractId: acmeId,
+      referencedContractIds: [],
+    },
+    ctx,
+  );
 }

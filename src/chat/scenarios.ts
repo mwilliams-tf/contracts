@@ -1,9 +1,24 @@
 import scenariosData from "../data/chat-scenarios.json";
 import { STANLEY_CLAUSE_13_TERMINACION } from "../data/stanley-clause-13";
 import type { ChatAnswer, ChatContext, Citation, Source } from "../models";
-import { answer, detectIntent, filterContractsByProviderMention, resolveContracts } from "./engine";
+import {
+  answer,
+  answerPortfolioExpiration,
+  detectIntent,
+  filterContractsByProviderMention,
+  finalizeAnswer,
+  resolveContracts,
+  toCitation,
+} from "./engine";
 import { tryAcmeDemoAnswer, isAcmeConversation, resolveAcmeContractId } from "./acme-demo";
-import { tryStanleyDemoAnswer, resolveStanleyContractId, isStanleyConversation } from "./stanley-demo";
+import { tryCrossReferenceAnswer } from "./cross-reference";
+import { proposeDraft } from "./drafting";
+import { deriveSuggestions } from "./suggestions";
+import {
+  tryStanleyDemoAnswer,
+  resolveStanleyContractId,
+  isStanleyConversation,
+} from "./stanley-demo";
 
 interface ScenarioMatch {
   anyKeywords?: string[];
@@ -20,6 +35,7 @@ interface ScenarioResponse {
 interface ChatScenario {
   id: string;
   contractIds?: string[];
+  conversationTypes?: ("portfolio" | "anchored")[];
   match: ScenarioMatch;
   response: ScenarioResponse;
 }
@@ -96,22 +112,12 @@ function buildSearchText(query: string, ctx: ChatContext): string {
   return prior ? `${prior} ${query}` : query;
 }
 
-function sourceToCitation(source: Source): Citation {
-  return {
-    sourceId: source.id,
-    sender: source.sender,
-    date: source.date,
-    subject: source.subject,
-    simulatedLink: source.simulatedLink,
-  };
-}
-
 function resolveCitations(sourceIds: string[] | undefined, ctx: ChatContext): Citation[] {
   if (!sourceIds?.length) return [];
   return sourceIds
     .map((id) => ctx.corpus.sources.find((s) => s.id === id))
     .filter((s): s is Source => Boolean(s))
-    .map(sourceToCitation);
+    .map(toCitation);
 }
 
 function scoreScenario(
@@ -122,6 +128,10 @@ function scoreScenario(
 ): number {
   const q = normalize(searchText);
   const providerHints = getProviderHints(scenario.contractIds);
+
+  if (scenario.conversationTypes?.length && ctx.conversationType) {
+    if (!scenario.conversationTypes.includes(ctx.conversationType)) return 0;
+  }
 
   if (providerHints.length > 0) {
     if (!mentionsProvider(searchText, providerHints)) return 0;
@@ -200,11 +210,23 @@ function buildScenarioAnswer(
 ): ChatAnswer {
   const contractId = resolveScenarioContractId(scenario, ctx, matchedContractIds);
 
+  return finalizeAnswer(
+    {
+      text: resolveScenarioText(scenario),
+      citations: resolveCitations(scenario.response.citationSourceIds, ctx),
+      matchedContractIds: contractId ? [contractId] : [],
+      intent: detectIntent(query, ctx.priorMessages),
+    },
+    ctx,
+  );
+}
+
+function attachSuggestions(result: ChatAnswer, ctx: ChatContext, query: string): ChatAnswer {
+  const draft = proposeDraft(query, ctx);
+  const withDraft = draft ? { ...result, proposedDraft: draft } : result;
   return {
-    text: resolveScenarioText(scenario),
-    citations: resolveCitations(scenario.response.citationSourceIds, ctx),
-    matchedContractIds: contractId ? [contractId] : [],
-    intent: detectIntent(query, ctx.priorMessages),
+    ...withDraft,
+    suggestions: deriveSuggestions(ctx, withDraft),
   };
 }
 
@@ -213,22 +235,48 @@ export function answerFromScenarios(query: string, ctx: ChatContext): ChatAnswer
   const searchText = buildSearchText(query, ctx);
   const cq = normalize(query);
 
-  // Demo hardcodeado: gana el proveedor explícito en la pregunta actual
+  if (ctx.conversationType === "portfolio" && cq.includes("2028")) {
+    const portfolio = answerPortfolioExpiration("2028", ctx);
+    if (portfolio) return attachSuggestions(portfolio, ctx, query);
+  }
+
+  const crossRef = tryCrossReferenceAnswer(query, ctx);
+  if (crossRef) return attachSuggestions(crossRef, ctx, query);
+
   if (cq.includes("acme")) {
     const acmeAnswer = tryAcmeDemoAnswer(query, ctx);
-    if (acmeAnswer) return acmeAnswer;
+    if (acmeAnswer) return attachSuggestions(acmeAnswer, ctx, query);
   } else if (cq.includes("stanley")) {
     const stanleyAnswer = tryStanleyDemoAnswer(query, ctx);
-    if (stanleyAnswer) return stanleyAnswer;
+    if (stanleyAnswer) return attachSuggestions(stanleyAnswer, ctx, query);
   } else {
     if (isAcmeConversation(query, ctx)) {
       const acmeAnswer = tryAcmeDemoAnswer(query, ctx);
-      if (acmeAnswer) return acmeAnswer;
+      if (acmeAnswer) return attachSuggestions(acmeAnswer, ctx, query);
     }
     if (isStanleyConversation(query, ctx)) {
       const stanleyAnswer = tryStanleyDemoAnswer(query, ctx);
-      if (stanleyAnswer) return stanleyAnswer;
+      if (stanleyAnswer) return attachSuggestions(stanleyAnswer, ctx, query);
     }
+  }
+
+  const draftOnly = proposeDraft(query, ctx);
+  if (draftOnly && isStanleyConversation(query, ctx)) {
+    const stanleyId = resolveStanleyContractId(ctx);
+    return attachSuggestions(
+      finalizeAnswer(
+        {
+          text: "Propongo una redacción ampliada para la Cláusula 9. Podés aplicarla al borrador de trabajo local (acción simulada — no modifica fuentes reales).",
+          citations: resolveCitations(["src-007"], ctx),
+          matchedContractIds: [stanleyId],
+          intent: detectIntent(query, ctx.priorMessages),
+          proposedDraft: draftOnly,
+        },
+        ctx,
+      ),
+      ctx,
+      query,
+    );
   }
 
   const matched = filterContractsByProviderMention(resolveContracts(ctx, searchText), searchText);
@@ -246,36 +294,59 @@ export function answerFromScenarios(query: string, ctx: ChatContext): ChatAnswer
   }
 
   if (best && bestScore >= MIN_SCORE) {
-    return buildScenarioAnswer(best, ctx, query, matchedIds);
+    return attachSuggestions(buildScenarioAnswer(best, ctx, query, matchedIds), ctx, query);
   }
 
   if (isStanleyConversation(query, ctx)) {
-    return {
-      text: fallback.text,
-      citations: [],
-      matchedContractIds: [resolveStanleyContractId(ctx)],
-      intent: detectIntent(query, ctx.priorMessages),
-    };
+    return attachSuggestions(
+      finalizeAnswer(
+        {
+          text: fallback.text,
+          citations: [],
+          matchedContractIds: [resolveStanleyContractId(ctx)],
+          intent: detectIntent(query, ctx.priorMessages),
+        },
+        ctx,
+      ),
+      ctx,
+      query,
+    );
   }
 
   if (isAcmeConversation(query, ctx)) {
-    return {
-      text: fallback.text,
-      citations: [],
-      matchedContractIds: [resolveAcmeContractId(ctx)],
-      intent: detectIntent(query, ctx.priorMessages),
-    };
+    return attachSuggestions(
+      finalizeAnswer(
+        {
+          text: fallback.text,
+          citations: [],
+          matchedContractIds: [resolveAcmeContractId(ctx)],
+          intent: detectIntent(query, ctx.priorMessages),
+        },
+        ctx,
+      ),
+      ctx,
+      query,
+    );
   }
 
   const engineAnswer = answer(query, ctx);
   if (engineAnswer.matchedContractIds.length > 0) {
-    return engineAnswer;
+    return attachSuggestions(engineAnswer, ctx, query);
   }
 
-  return {
-    text: fallback.text,
-    citations: [],
-    matchedContractIds: [],
-    intent: detectIntent(query, ctx.priorMessages),
-  };
+  return attachSuggestions(
+    finalizeAnswer(
+      {
+        text: fallback.text,
+        citations: [],
+        matchedContractIds: [],
+        intent: detectIntent(query, ctx.priorMessages),
+        principalContractId: null,
+        referencedContractIds: [],
+      },
+      ctx,
+    ),
+    ctx,
+    query,
+  );
 }

@@ -13,8 +13,8 @@ import { NotificationsPanel } from "./components/NotificationsPanel";
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-md px-3 py-2 text-sm font-medium transition ${
     isActive
-      ? "bg-white/15 text-white"
-      : "text-white/80 hover:bg-white/10 hover:text-white"
+      ? "bg-white/20 text-white"
+      : "text-slate-200 hover:bg-white/10 hover:text-white"
   }`;
 
 export default function App() {
@@ -65,7 +65,7 @@ export default function App() {
             id="user-select"
             value={userId ?? ""}
             onChange={(e) => handleUserChange(e.target.value)}
-            className="w-44 shrink-0 rounded-md border-0 bg-white/10 px-2 py-1.5 text-sm text-white focus:ring-2 focus:ring-bank-gold lg:w-56"
+            className="w-44 shrink-0 rounded-md border border-white/20 bg-white px-2 py-1.5 text-sm text-slate-900 focus:ring-2 focus:ring-bank-gold lg:w-56"
           >
             {corpus.users
               .filter((u) => u.role !== "proveedor")
@@ -89,7 +89,7 @@ export default function App() {
           <Route path="/" element={<Board />} />
           <Route path="/contratos/:id" element={<ContractDetail />} />
           <Route path="/contratos/:id/repositorio" element={<ContractRepository />} />
-          <Route path="/chat" element={<ChatView />} />
+          <Route path="/chat/*" element={<ChatView />} />
           <Route path="/solicitud" element={<RequestForm />} />
         </Routes>
       </main>

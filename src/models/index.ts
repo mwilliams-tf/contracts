@@ -93,6 +93,7 @@ export interface ContractWorkflowOverride {
 
 export interface Citation {
   sourceId: string;
+  contractId: string;
   sender: string;
   date: string;
   subject: string;
@@ -106,7 +107,59 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+export interface DraftProposal {
+  contractId: string;
+  clauseRef: string;
+  proposedText: string;
+  basedOnContractIds: string[];
+}
+
+export interface WorkingDraft {
+  id: string;
+  contractId: string;
+  version: number;
+  clauseRef: string;
+  text: string;
+  simulated: true;
+  createdAt: string;
+  sourceConversationId: string;
+}
+
+export interface Suggestion {
+  id: string;
+  label: string;
+  query: string;
+  visibleWhen?: {
+    conversationType?: "portfolio" | "anchored";
+    focusStateId?: string;
+  };
+}
+
+export interface Turn {
+  role: "user" | "assistant";
+  text: string;
+  timestamp: string;
+  citations?: Citation[];
+  principalContractId?: string | null;
+  referencedContractIds?: string[];
+  proposedDraft?: DraftProposal | null;
+  suggestions?: Suggestion[];
+}
+
 export interface Conversation {
+  id: string;
+  userId: string;
+  title: string;
+  type: "portfolio" | "anchored";
+  focusContractId: string | null;
+  status: "live" | "frozen";
+  createdAt: string;
+  updatedAt: string;
+  messages: Turn[];
+}
+
+/** Hilo único de `001` — conservado para compatibilidad en history.ts */
+export interface LegacyConversation {
   userId: string;
   messages: ChatMessage[];
 }
@@ -138,14 +191,19 @@ export interface ChatAnswer {
   text: string;
   citations: Citation[];
   matchedContractIds: string[];
+  principalContractId: string | null;
+  referencedContractIds: string[];
+  proposedDraft?: DraftProposal | null;
+  suggestions?: Suggestion[];
   intent: ChatIntent;
 }
 
 export interface ChatContext {
   corpus: Corpus;
   userId: string;
-  /** Mensajes anteriores en la conversación (para follow-ups) */
-  priorMessages?: ChatMessage[];
+  conversationType?: "portfolio" | "anchored";
+  focusContractId?: string;
+  priorMessages?: Turn[];
 }
 
 export interface StoredRequest {

@@ -32,6 +32,7 @@ const INTENT_KEYWORDS: Record<Exclude<ChatIntent, "general">, string[]> = {
     "duracion",
     "cuanto dura",
     "cuánto dura",
+    "2028",
   ],
   firmantes: ["firma", "firmante", "firmado", "firmantes", "apoderado", "apoderada"],
   clausula: ["cláusula", "clausula", "condición", "condicion", "penalidad", "clausulas"],
@@ -107,7 +108,6 @@ function buildSearchText(query: string, ctx: ChatContext): string {
   return prior ? `${prior} ${query}` : query;
 }
 
-/** Resuelve contratos citados en la consulta o en mensajes recientes del hilo */
 export function resolveContracts(ctx: ChatContext, query: string): EnrichedContract[] {
   const searchText = buildSearchText(query, ctx);
   const matches = matchContracts(ctx, searchText);
@@ -125,7 +125,6 @@ export function matchContracts(ctx: ChatContext, query: string): EnrichedContrac
   return scored.map((s) => s.contract);
 }
 
-/** Prioriza el proveedor mencionado en la consulta (p. ej. Stanley vs Acme) */
 export function filterContractsByProviderMention(
   contracts: EnrichedContract[],
   searchText: string,
@@ -155,9 +154,10 @@ function sourcesByRecency(sources: Source[]): Source[] {
   );
 }
 
-function toCitation(source: Source): Citation {
+export function toCitation(source: Source): Citation {
   return {
     sourceId: source.id,
+    contractId: source.contractId,
     sender: source.sender,
     date: source.date,
     subject: source.subject,
@@ -165,37 +165,89 @@ function toCitation(source: Source): Citation {
   };
 }
 
-function buildVencimientoAnswer(contract: EnrichedContract, sources: Source[]): ChatAnswer {
+export function defaultPrincipalId(
+  ctx: ChatContext,
+  matchedContractIds: string[],
+): string | null {
+  if (ctx.conversationType === "anchored" && ctx.focusContractId) {
+    return ctx.focusContractId;
+  }
+  if (matchedContractIds.length === 1) return matchedContractIds[0];
+  return null;
+}
+
+export function finalizeAnswer(
+  partial: Omit<ChatAnswer, "principalContractId" | "referencedContractIds"> &
+    Partial<Pick<ChatAnswer, "principalContractId" | "referencedContractIds">>,
+  ctx: ChatContext,
+): ChatAnswer {
+  const principal =
+    partial.principalContractId !== undefined
+      ? partial.principalContractId
+      : defaultPrincipalId(ctx, partial.matchedContractIds);
+
+  const referenced =
+    partial.referencedContractIds ??
+    partial.matchedContractIds.filter((id) => id !== principal);
+
+  return {
+    ...partial,
+    principalContractId: principal,
+    referencedContractIds: referenced,
+    citations: partial.citations.map((c) =>
+      c.contractId ? c : { ...c, contractId: partial.matchedContractIds[0] ?? "" },
+    ),
+  };
+}
+
+function buildVencimientoAnswer(
+  contract: EnrichedContract,
+  sources: Source[],
+  ctx: ChatContext,
+): ChatAnswer {
   const sorted = sourcesByRecency(sources);
   const latest = sorted[0];
 
   if (latest) {
-    return {
-      text: `El contrato "${contract.title}" con ${contract.provider.name} vence el ${formatDate(contract.expirationDate)}. Según la fuente más reciente (${formatDate(latest.date)}, ${latest.sender}): ${latest.excerpt}`,
-      citations: [toCitation(latest)],
-      matchedContractIds: [contract.id],
-      intent: "vencimiento",
-    };
+    return finalizeAnswer(
+      {
+        text: `El contrato "${contract.title}" con ${contract.provider.name} vence el ${formatDate(contract.expirationDate)}. Según la fuente más reciente (${formatDate(latest.date)}, ${latest.sender}): ${latest.excerpt}`,
+        citations: [toCitation(latest)],
+        matchedContractIds: [contract.id],
+        intent: "vencimiento",
+      },
+      ctx,
+    );
   }
 
   if (contract.expirationDate) {
-    return {
-      text: `El contrato "${contract.title}" tiene fecha de vencimiento registrada: ${formatDate(contract.expirationDate)}. No encontré una fuente documental adicional que respalde este dato.`,
+    return finalizeAnswer(
+      {
+        text: `El contrato "${contract.title}" tiene fecha de vencimiento registrada: ${formatDate(contract.expirationDate)}. No encontré una fuente documental adicional que respalde este dato.`,
+        citations: [],
+        matchedContractIds: [contract.id],
+        intent: "vencimiento",
+      },
+      ctx,
+    );
+  }
+
+  return finalizeAnswer(
+    {
+      text: `No encontré información de vencimiento para el contrato "${contract.title}". No hay respaldo documental disponible en el corpus.`,
       citations: [],
       matchedContractIds: [contract.id],
       intent: "vencimiento",
-    };
-  }
-
-  return {
-    text: `No encontré información de vencimiento para el contrato "${contract.title}". No hay respaldo documental disponible en el corpus.`,
-    citations: [],
-    matchedContractIds: [contract.id],
-    intent: "vencimiento",
-  };
+    },
+    ctx,
+  );
 }
 
-function buildFirmantesAnswer(contract: EnrichedContract, sources: Source[]): ChatAnswer {
+function buildFirmantesAnswer(
+  contract: EnrichedContract,
+  sources: Source[],
+  ctx: ChatContext,
+): ChatAnswer {
   const sorted = sourcesByRecency(sources);
   const pending = contract.signatories.filter((s) => !s.signed);
   const signed = contract.signatories.filter((s) => s.signed);
@@ -231,15 +283,22 @@ function buildFirmantesAnswer(contract: EnrichedContract, sources: Source[]): Ch
     citations.push(toCitation(sorted[0]));
   }
 
-  return {
-    text,
-    citations,
-    matchedContractIds: [contract.id],
-    intent: "firmantes",
-  };
+  return finalizeAnswer(
+    {
+      text,
+      citations,
+      matchedContractIds: [contract.id],
+      intent: "firmantes",
+    },
+    ctx,
+  );
 }
 
-function buildClausulaAnswer(contract: EnrichedContract, sources: Source[]): ChatAnswer {
+function buildClausulaAnswer(
+  contract: EnrichedContract,
+  sources: Source[],
+  ctx: ChatContext,
+): ChatAnswer {
   const sorted = sourcesByRecency(sources);
   const clausulaSource = sorted.find(
     (s) =>
@@ -249,32 +308,45 @@ function buildClausulaAnswer(contract: EnrichedContract, sources: Source[]): Cha
   );
 
   if (clausulaSource) {
-    return {
-      text: `Sobre el contrato "${contract.title}": ${clausulaSource.excerpt}`,
-      citations: [toCitation(clausulaSource)],
-      matchedContractIds: [contract.id],
-      intent: "clausula",
-    };
+    return finalizeAnswer(
+      {
+        text: `Sobre el contrato "${contract.title}": ${clausulaSource.excerpt}`,
+        citations: [toCitation(clausulaSource)],
+        matchedContractIds: [contract.id],
+        intent: "clausula",
+      },
+      ctx,
+    );
   }
 
-  return {
-    text: `No encontré una cláusula específica citada en las fuentes del contrato "${contract.title}". Podés consultar los documentos asociados en el detalle del contrato.`,
-    citations: [],
-    matchedContractIds: [contract.id],
-    intent: "clausula",
-  };
+  return finalizeAnswer(
+    {
+      text: `No encontré una cláusula específica citada en las fuentes del contrato "${contract.title}". Podés consultar los documentos asociados en el detalle del contrato.`,
+      citations: [],
+      matchedContractIds: [contract.id],
+      intent: "clausula",
+    },
+    ctx,
+  );
 }
 
-function buildPartesAnswer(contract: EnrichedContract): ChatAnswer {
-  return {
-    text: `Las partes del contrato "${contract.title}" son: ${contract.parties.join(" y ")}. El proveedor es ${contract.provider.name} (${contract.provider.service}).`,
-    citations: [],
-    matchedContractIds: [contract.id],
-    intent: "partes",
-  };
+function buildPartesAnswer(contract: EnrichedContract, ctx: ChatContext): ChatAnswer {
+  return finalizeAnswer(
+    {
+      text: `Las partes del contrato "${contract.title}" son: ${contract.parties.join(" y ")}. El proveedor es ${contract.provider.name} (${contract.provider.service}).`,
+      citations: [],
+      matchedContractIds: [contract.id],
+      intent: "partes",
+    },
+    ctx,
+  );
 }
 
-function buildEstadoAnswer(contract: EnrichedContract, sources: Source[]): ChatAnswer {
+function buildEstadoAnswer(
+  contract: EnrichedContract,
+  sources: Source[],
+  ctx: ChatContext,
+): ChatAnswer {
   const sorted = sourcesByRecency(sources);
   const latestHistory = contract.stateHistory[contract.stateHistory.length - 1];
 
@@ -285,15 +357,22 @@ function buildEstadoAnswer(contract: EnrichedContract, sources: Source[]): ChatA
 
   const citations: Citation[] = sorted.length ? [toCitation(sorted[0])] : [];
 
-  return {
-    text,
-    citations,
-    matchedContractIds: [contract.id],
-    intent: "estado",
-  };
+  return finalizeAnswer(
+    {
+      text,
+      citations,
+      matchedContractIds: [contract.id],
+      intent: "estado",
+    },
+    ctx,
+  );
 }
 
-function buildGeneralAnswer(contract: EnrichedContract, sources: Source[]): ChatAnswer {
+function buildGeneralAnswer(
+  contract: EnrichedContract,
+  sources: Source[],
+  ctx: ChatContext,
+): ChatAnswer {
   const sorted = sourcesByRecency(sources);
   const citation = sorted[0];
   const latestHistory = contract.stateHistory[contract.stateHistory.length - 1];
@@ -311,47 +390,124 @@ function buildGeneralAnswer(contract: EnrichedContract, sources: Source[]): Chat
     citation ? `Referencia: ${citation.excerpt}` : null,
   ].filter(Boolean);
 
-  return {
-    text: parts.join(" "),
-    citations: citation ? [toCitation(citation)] : [],
-    matchedContractIds: [contract.id],
-    intent: "general",
-  };
+  return finalizeAnswer(
+    {
+      text: parts.join(" "),
+      citations: citation ? [toCitation(citation)] : [],
+      matchedContractIds: [contract.id],
+      intent: "general",
+    },
+    ctx,
+  );
+}
+
+/** Resuelve follow-ups como "¿y los firmantes?" usando foco + memoria de hilo */
+export function resolveFollowUpContract(
+  ctx: ChatContext,
+  query: string,
+): EnrichedContract | undefined {
+  const q = normalize(query);
+  const isFollowUp =
+    q.includes("y los firmantes") ||
+    q.includes("y el firmante") ||
+    q.includes("esa clausula") ||
+    q.includes("esa cláusula") ||
+    q.startsWith("y ") ||
+    q.includes("los firmantes");
+
+  if (!isFollowUp) return undefined;
+
+  if (ctx.focusContractId) {
+    return ctx.corpus.contracts.find((c) => c.id === ctx.focusContractId);
+  }
+
+  const priorAssistant = [...(ctx.priorMessages ?? [])]
+    .reverse()
+    .find((m) => m.role === "assistant" && m.principalContractId);
+  if (priorAssistant?.principalContractId) {
+    return ctx.corpus.contracts.find((c) => c.id === priorAssistant.principalContractId);
+  }
+
+  return undefined;
 }
 
 export function answer(query: string, ctx: ChatContext): ChatAnswer {
   const intent = detectIntent(query, ctx.priorMessages);
+  const followUpContract = resolveFollowUpContract(ctx, query);
+
+  if (followUpContract && (intent === "firmantes" || normalize(query).includes("firmante"))) {
+    return buildFirmantesAnswer(followUpContract, followUpContract.sources, ctx);
+  }
+
   const searchText = buildSearchText(query, ctx);
   const matches = filterContractsByProviderMention(resolveContracts(ctx, query), searchText);
 
   if (matches.length === 0) {
-    return {
-      text: "No encontré información sobre ese tema en el corpus de contratos ficticios. Probá mencionar el nombre del proveedor o del servicio.",
-      citations: [],
-      matchedContractIds: [],
-      intent,
-    };
+    return finalizeAnswer(
+      {
+        text: "No encontré información sobre ese tema en el corpus de contratos ficticios. Probá mencionar el nombre del proveedor o del servicio.",
+        citations: [],
+        matchedContractIds: [],
+        intent,
+        principalContractId: null,
+        referencedContractIds: [],
+      },
+      ctx,
+    );
   }
 
   const contract = matches[0];
   const sources = contract.sources;
 
-  if (matches.length > 1 && contract.state.active) {
-    // ambiguity resolved to active contract — noted in responses where relevant
-  }
-
   switch (intent) {
     case "vencimiento":
-      return buildVencimientoAnswer(contract, sources);
+      return buildVencimientoAnswer(contract, sources, ctx);
     case "firmantes":
-      return buildFirmantesAnswer(contract, sources);
+      return buildFirmantesAnswer(contract, sources, ctx);
     case "clausula":
-      return buildClausulaAnswer(contract, sources);
+      return buildClausulaAnswer(contract, sources, ctx);
     case "partes":
-      return buildPartesAnswer(contract);
+      return buildPartesAnswer(contract, ctx);
     case "estado":
-      return buildEstadoAnswer(contract, sources);
+      return buildEstadoAnswer(contract, sources, ctx);
     default:
-      return buildGeneralAnswer(contract, sources);
+      return buildGeneralAnswer(contract, sources, ctx);
   }
+}
+
+/** Portfolio: contratos que vencen en un año dado */
+export function answerPortfolioExpiration(
+  year: string,
+  ctx: ChatContext,
+): ChatAnswer | null {
+  const matches = ctx.corpus.contracts.filter((c) =>
+    c.expirationDate?.startsWith(`${year}-`),
+  );
+
+  if (matches.length === 0) return null;
+
+  const lines = matches.map((c) => {
+    const citation = sourcesByRecency(c.sources)[0];
+    const cite = citation
+      ? ` (fuente: ${citation.sender}, ${formatDate(citation.date)})`
+      : "";
+    return `• ${c.title} (${c.provider.name}) — vence ${formatDate(c.expirationDate)}${cite}`;
+  });
+
+  const citations = matches
+    .map((c) => sourcesByRecency(c.sources)[0])
+    .filter((s): s is Source => Boolean(s))
+    .map(toCitation);
+
+  return finalizeAnswer(
+    {
+      text: `Encontré ${matches.length} contrato${matches.length === 1 ? "" : "s"} con vencimiento en ${year}:\n\n${lines.join("\n")}`,
+      citations,
+      matchedContractIds: matches.map((c) => c.id),
+      intent: "vencimiento",
+      principalContractId: null,
+      referencedContractIds: matches.map((c) => c.id),
+    },
+    ctx,
+  );
 }

@@ -1,12 +1,20 @@
-import type { ChatMessage } from "../../models";
+import type { Corpus, Turn } from "../../models";
+import { getContractById } from "../../lib/corpus";
 import { CitationCard } from "./CitationCard";
 
 interface MessageBubbleProps {
-  message: ChatMessage;
+  turn: Turn;
+  corpus: Corpus;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
-  const isUser = message.role === "user";
+export function MessageBubble({ turn, corpus }: MessageBubbleProps) {
+  const isUser = turn.role === "user";
+  const principal = turn.principalContractId
+    ? getContractById(corpus, turn.principalContractId)
+    : undefined;
+  const referenced = (turn.referencedContractIds ?? [])
+    .map((id) => getContractById(corpus, id))
+    .filter(Boolean);
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -17,12 +25,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             : "border border-slate-200 bg-white text-slate-800"
         }`}
       >
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.text}</p>
-        {!isUser && message.citations && message.citations.length > 0 && (
+        {!isUser && principal && (
+          <p className="mb-2 text-xs font-medium text-bank-navy">
+            Contrato principal: {principal.title}
+          </p>
+        )}
+        {!isUser && referenced.length > 0 && (
+          <p className="mb-2 text-xs text-slate-600">
+            Referenciados: {referenced.map((c) => c!.title).join(" · ")}
+          </p>
+        )}
+        <p className="whitespace-pre-wrap text-sm leading-relaxed">{turn.text}</p>
+        {!isUser && turn.citations && turn.citations.length > 0 && (
           <div className="mt-2 space-y-2">
             <p className="text-xs font-medium text-slate-500">Fuentes citadas:</p>
-            {message.citations.map((c) => (
-              <CitationCard key={c.sourceId} citation={c} />
+            {turn.citations.map((c) => (
+              <CitationCard key={c.sourceId} citation={c} corpus={corpus} />
             ))}
           </div>
         )}

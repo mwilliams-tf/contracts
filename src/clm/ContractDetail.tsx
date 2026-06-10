@@ -1,17 +1,26 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { FictitiousDataBadge } from "../components/FictitiousDataBadge";
 import { formatDate, getContractById, isExpired } from "../lib/corpus";
+import { openOrCreateAnchored } from "../lib/conversations";
 import { useCorpus } from "../lib/useCorpus";
-import { getActiveUser } from "../lib/session";
+import { getActiveUser, getActiveUserId } from "../lib/session";
 import { DocumentOriginBadge } from "./components/DocumentOriginBadge";
 import { StateBadge } from "./components/StateBadge";
 import { WorkflowActions } from "./components/WorkflowActions";
 
 export function ContractDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const corpus = useCorpus();
   const user = getActiveUser(corpus.users);
+  const userId = getActiveUserId();
   const contract = id ? getContractById(corpus, id) : undefined;
+
+  function handleConsultAssistant() {
+    if (!userId || !contract || user?.role !== "abogada") return;
+    const conv = openOrCreateAnchored(userId, contract.id, contract.title);
+    navigate(`/chat/c/${conv.id}`);
+  }
 
   if (!contract) {
     return (
@@ -37,6 +46,15 @@ export function ContractDetail() {
           <p className="mt-1 text-slate-600">{contract.provider.name}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {user?.role === "abogada" && (
+            <button
+              type="button"
+              onClick={handleConsultAssistant}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-bank-navy bg-bank-navy px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-bank-navy/90"
+            >
+              Consultar al asistente
+            </button>
+          )}
           <Link
             to={`/contratos/${contract.id}/repositorio`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-bank-navy shadow-sm hover:bg-slate-50"
