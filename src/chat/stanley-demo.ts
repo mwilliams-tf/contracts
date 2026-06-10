@@ -1,4 +1,10 @@
+import { STANLEY_CLAUSE_13_TERMINACION } from "../data/stanley-clause-13";
 import type { ChatAnswer, ChatContext, Citation, Source } from "../models";
+import {
+  isStanleyAnchored,
+  isStanleyConversation,
+  threadMentionsClausula9,
+} from "./conversation-context";
 import { detectIntent, finalizeAnswer, toCitation } from "./engine";
 
 /** Guion demo Stanley — prioridad fija, se evalúa antes del matcher genérico */
@@ -8,6 +14,13 @@ export type StanleyDemoQuestionId =
   | "stanley-estado"
   | "stanley-cross-acme"
   | "stanley-redaccion";
+
+const STANLEY_DRAFT_TEXT =
+  "Limitación de responsabilidad (Cláusula 9 — redacción propuesta):\n\n" +
+  "Salvo dolo o culpa grave, la responsabilidad total acumulada del Proveedor no excederá el veinte por ciento (20%) del fee anual del contrato. " +
+  "Se excluyen expresamente lucro cesante e indirectos, salvo pérdida de datos personales por incumplimiento de medidas de seguridad acordadas. " +
+  "El Proveedor mantendrá cobertura de seguro de responsabilidad civil por un monto no inferior al fee anual. " +
+  "Esta redacción incorpora el precedente de negociación del contrato Acme (priorización de fuente reciente y carve-out para datos personales).";
 
 const STANLEY_RESPONSES: Record<
   StanleyDemoQuestionId,
@@ -30,7 +43,7 @@ const STANLEY_RESPONSES: Record<
   },
   "stanley-rescision": {
     text: () =>
-      `El contrato dice lo siguiente sobre las causales de rescisión y terminación de la vigencia (Cláusula 13 — Terminación de la vigencia del Contrato):\n\nConsultá el borrador en el repositorio del contrato Stanley.`,
+      `El contrato dice lo siguiente sobre las causales de rescisión y terminación de la vigencia (Cláusula 13 — Terminación de la vigencia del Contrato):\n\n${STANLEY_CLAUSE_13_TERMINACION}`,
     citationSourceIds: ["src-009"],
   },
   "stanley-cross-acme": {
@@ -41,7 +54,7 @@ const STANLEY_RESPONSES: Record<
   },
   "stanley-redaccion": {
     text:
-      "Propongo una redacción ampliada para la Cláusula 9 del contrato Stanley, incorporando el precedente de Acme. Podés aplicarla al borrador de trabajo local (acción simulada).",
+      "Propongo una redacción ampliada para la Cláusula 9 del contrato Stanley, incorporando el precedente de Acme. Podés aplicarla al documento con control de cambios habilitado.",
     citationSourceIds: ["src-007"],
     proposedDraft: true,
   },
@@ -54,37 +67,13 @@ function normalize(text: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function buildSearchText(query: string, ctx: ChatContext): string {
-  const prior = ctx.priorMessages
-    ?.filter((m) => m.role === "user")
-    .slice(-3)
-    .map((m) => m.text)
-    .join(" ");
-  return prior ? `${prior} ${query}` : query;
-}
-
-export function isStanleyConversation(query: string, ctx: ChatContext): boolean {
-  if (ctx.conversationType === "anchored" && ctx.focusContractId) {
-    const focus = ctx.corpus.contracts.find((c) => c.id === ctx.focusContractId);
-    if (
-      focus &&
-      (normalize(focus.provider.name).includes("stanley") ||
-        normalize(focus.title).includes("stanley"))
-    ) {
-      return true;
-    }
-  }
-
-  const cq = normalize(query);
-  const sq = normalize(buildSearchText(query, ctx));
-  if (cq.includes("acme")) return false;
-  return cq.includes("stanley") || (sq.includes("stanley") && !sq.includes("acme"));
-}
+export { isStanleyConversation, isStanleyAnchored };
 
 export function resolveStanleyContractId(ctx: ChatContext): string {
   if (ctx.focusContractId) {
     const focus = ctx.corpus.contracts.find((c) => c.id === ctx.focusContractId);
     if (focus) return focus.id;
+    if (isStanleyAnchored(ctx)) return ctx.focusContractId;
   }
   const contract = ctx.corpus.contracts.find(
     (c) =>
@@ -94,11 +83,48 @@ export function resolveStanleyContractId(ctx: ChatContext): string {
   return contract?.id ?? "ctr-006";
 }
 
+export function resolveStanleyTitle(ctx: ChatContext): string {
+  const id = resolveStanleyContractId(ctx);
+  return ctx.corpus.contracts.find((c) => c.id === id)?.title ?? "Contrato Servicios IT — Stanley";
+}
+
 function resolveCitations(sourceIds: string[], ctx: ChatContext): Citation[] {
   return sourceIds
     .map((id) => ctx.corpus.sources.find((s) => s.id === id))
     .filter((s): s is Source => Boolean(s))
     .map(toCitation);
+}
+
+function isRedactionRequest(query: string, ctx: ChatContext): boolean {
+  const cq = normalize(query);
+  return (
+    cq.includes("amplia") ||
+    cq.includes("ampliar") ||
+    cq.includes("redacta") ||
+    cq.includes("redactar") ||
+    cq.includes("nueva redaccion") ||
+    cq.includes("contrapropuesta") ||
+    cq.includes("solucion") ||
+    cq.includes("propones") ||
+    cq.includes("propone") ||
+    cq.includes("propuesta") ||
+    (cq.includes("esa clausula") && threadMentionsClausula9(ctx))
+  );
+}
+
+function isCrossAcmeRequest(query: string): boolean {
+  const cq = normalize(query);
+  return (
+    cq.includes("como en acme") ||
+    cq.includes("como se resolvio") ||
+    cq.includes("como resolvimos") ||
+    cq.includes("cómo se resolvió") ||
+    cq.includes("cómo resolvimos") ||
+    cq.includes("precedente") ||
+    cq.includes("comparar") ||
+    cq.includes("en acme") ||
+    cq.includes("con acme")
+  );
 }
 
 export function matchStanleyDemoQuestion(
@@ -107,51 +133,34 @@ export function matchStanleyDemoQuestion(
 ): StanleyDemoQuestionId | null {
   if (!isStanleyConversation(query, ctx)) return null;
 
-  const q = normalize(buildSearchText(query, ctx));
-
-  const isRedaccion =
-    q.includes("amplia") ||
-    q.includes("ampliar") ||
-    q.includes("redacta") ||
-    q.includes("redactar") ||
-    q.includes("nueva redaccion") ||
-    q.includes("contrapropuesta");
-
-  const isCrossAcme =
-    q.includes("como en acme") ||
-    q.includes("como se resolvio") ||
-    q.includes("como resolvimos") ||
-    q.includes("cómo se resolvió") ||
-    q.includes("en acme") ||
-    q.includes("con acme") ||
-    q.includes("precedente");
+  const cq = normalize(query);
 
   const isRescision =
-    q.includes("causales") ||
-    q.includes("resci") ||
-    q.includes("resision") ||
-    q.includes("terminacion") ||
-    q.includes("clausula 13");
+    cq.includes("causales") ||
+    cq.includes("resci") ||
+    cq.includes("resision") ||
+    cq.includes("terminacion") ||
+    cq.includes("clausula 13");
 
   const isClausula9 =
-    q.includes("clausula 9") ||
-    q.includes("limitacion") ||
-    q.includes("responsabilidad") ||
-    q.includes("objecion") ||
-    q.includes("desacuerdo") ||
-    q.includes("de acuerdo") ||
-    q.includes("por que") ||
-    q.includes("porque") ||
-    q.includes("no estan de acuerdo");
+    cq.includes("clausula 9") ||
+    cq.includes("limitacion") ||
+    cq.includes("responsabilidad") ||
+    cq.includes("objecion") ||
+    cq.includes("desacuerdo") ||
+    cq.includes("de acuerdo") ||
+    cq.includes("por que") ||
+    cq.includes("porque") ||
+    cq.includes("no estan de acuerdo");
 
   const isEstado =
-    q.includes("estado") ||
-    q.includes("situacion") ||
-    q.includes("como esta") ||
-    q.includes("en que esta");
+    cq.includes("estado") ||
+    cq.includes("situacion") ||
+    cq.includes("como esta") ||
+    cq.includes("en que esta");
 
-  if (isRedaccion) return "stanley-redaccion";
-  if (isCrossAcme && !isRedaccion) return "stanley-cross-acme";
+  if (isRedactionRequest(query, ctx)) return "stanley-redaccion";
+  if (isCrossAcmeRequest(query)) return "stanley-cross-acme";
   if (isRescision) return "stanley-rescision";
   if (isClausula9 && !isRescision) return "stanley-clausula-9";
   if (isEstado) return "stanley-estado";
@@ -185,10 +194,7 @@ export function tryStanleyDemoAnswer(query: string, ctx: ChatContext): ChatAnswe
       proposedDraft: {
         contractId: stanleyId,
         clauseRef: "Cláusula 9",
-        proposedText:
-          "Limitación de responsabilidad (Cláusula 9 — redacción propuesta):\n\n" +
-          "Salvo dolo o culpa grave, la responsabilidad total acumulada del Proveedor no excederá el veinte por ciento (20%) del fee anual del contrato. " +
-          "Se excluyen expresamente lucro cesante e indirectos, salvo pérdida de datos personales por incumplimiento de medidas de seguridad acordadas.",
+        proposedText: STANLEY_DRAFT_TEXT,
         basedOnContractIds: ["ctr-001"],
       },
     };

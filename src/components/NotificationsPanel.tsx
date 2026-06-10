@@ -91,11 +91,17 @@ export function NotificationsPanel({ userId }: NotificationsPanelProps) {
                     to={`/contratos/${n.contractId}`}
                     onClick={() => handleNotificationClick(n.id)}
                     className={`block px-4 py-3 text-sm hover:bg-slate-50 ${
-                      n.read ? "text-slate-600" : "bg-amber-50/50 font-medium text-slate-800"
+                      n.read
+                        ? "text-slate-600"
+                        : "bg-amber-50 font-medium text-amber-950"
                     }`}
                   >
                     <p>{n.message}</p>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p
+                      className={`mt-1 text-xs ${
+                        n.read ? "text-slate-400" : "text-amber-800"
+                      }`}
+                    >
                       {new Date(n.createdAt).toLocaleString("es-AR", {
                         day: "2-digit",
                         month: "2-digit",

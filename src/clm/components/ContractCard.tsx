@@ -14,7 +14,9 @@ export function ContractCard({ contract }: ContractCardProps) {
     <Link
       to={`/contratos/${contract.id}`}
       className={`block rounded-lg border bg-white p-4 shadow-sm transition hover:border-bank-navy/30 hover:shadow-md ${
-        contract.state.active ? "border-l-4 border-l-bank-gold" : "border-slate-200"
+        contract.state.active
+          ? "border-slate-200 ring-1 ring-inset ring-bank-gold/50"
+          : "border-slate-200"
       } ${expired ? "opacity-75" : ""}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">

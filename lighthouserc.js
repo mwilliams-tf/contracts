@@ -1,5 +1,5 @@
 /** @type {import('@lhci/cli').Config} */
-module.exports = {
+export default {
   ci: {
     collect: {
       numberOfRuns: 1,

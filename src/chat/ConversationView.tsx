@@ -5,7 +5,7 @@ import { answerFromScenarios } from "./scenarios";
 import { deriveSuggestions } from "./suggestions";
 import { appendTurn, getConversation } from "../lib/conversations";
 import { getContractById } from "../lib/corpus";
-import { getActiveUser, getActiveUserId } from "../lib/session";
+import { getActiveUser } from "../lib/session";
 import { applyDraft, getWorkingDrafts } from "../lib/working-drafts";
 import { useCorpus } from "../lib/useCorpus";
 import type { ChatAnswer, Turn, WorkingDraft } from "../models";
@@ -26,27 +26,31 @@ function answerToTurn(answer: ChatAnswer): Turn {
   };
 }
 
-export function ConversationView() {
+export function ConversationView({ userId }: { userId: string | null }) {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
   const corpus = useCorpus();
-  const userId = getActiveUserId();
   const user = getActiveUser(corpus.users);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [draftVersion, setDraftVersion] = useState(0);
   const [appliedDrafts, setAppliedDrafts] = useState<Record<string, WorkingDraft>>({});
-  const [conversation, setConversation] = useState(() =>
-    userId && conversationId ? getConversation(userId, conversationId) : null,
-  );
+  const [conversation, setConversation] = useState<ReturnType<typeof getConversation>>(null);
 
   useEffect(() => {
-    if (userId && conversationId) {
-      setConversation(getConversation(userId, conversationId));
+    if (!userId || !conversationId) {
+      setConversation(null);
+      return;
     }
-  }, [userId, conversationId]);
+    const found = getConversation(userId, conversationId);
+    if (!found) {
+      setConversation(null);
+      navigate("/chat", { replace: true });
+      return;
+    }
+    setConversation(found);
+  }, [userId, conversationId, navigate]);
 
-  const isFrozen = conversation?.status === "frozen";
   const focusContract =
     conversation?.focusContractId != null
       ? getContractById(corpus, conversation.focusContractId)
@@ -75,7 +79,7 @@ export function ConversationView() {
   }
 
   function submitQuery(text: string) {
-    if (!text.trim() || !userId || !conversationId || !conversation || loading || isFrozen) {
+    if (!text.trim() || !userId || !conversationId || !conversation || loading) {
       return;
     }
 
@@ -113,10 +117,20 @@ export function ConversationView() {
   }
 
   function handleApplyDraft(proposal: NonNullable<Turn["proposedDraft"]>) {
-    if (!conversationId) return;
+    if (!userId || !conversationId) return;
     const draft = applyDraft(proposal, conversationId);
     setAppliedDrafts((prev) => ({ ...prev, [proposal.clauseRef]: draft }));
     setDraftVersion((v) => v + 1);
+
+    const confirmationTurn: Turn = {
+      role: "assistant",
+      text: `Listo, ${proposal.clauseRef} modificada en el documento con control de cambios habilitado.`,
+      timestamp: new Date().toISOString(),
+      principalContractId: proposal.contractId,
+      referencedContractIds: [],
+    };
+    appendTurn(userId, conversationId, confirmationTurn);
+    refresh();
   }
 
   if (!userId || !user) {
@@ -174,7 +188,6 @@ export function ConversationView() {
           <p className="mt-1 text-sm text-slate-600">
             {conversation.type === "portfolio" ? "Consulta transversal" : "Anclada a contrato"}
             {focusContract ? ` · ${focusContract.title}` : ""}
-            {isFrozen ? " · solo lectura" : ""}
           </p>
         </div>
         <FictitiousDataBadge />
@@ -182,7 +195,9 @@ export function ConversationView() {
 
       {workingDrafts.length > 0 && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-          <p className="font-medium text-amber-900">Borradores de trabajo simulados</p>
+          <p className="font-medium text-amber-900">
+            Cambios aplicados al documento (control de cambios)
+          </p>
           <ul className="mt-2 space-y-1 text-xs text-slate-700">
             {workingDrafts.map((d) => (
               <li key={d.id}>
@@ -190,12 +205,6 @@ export function ConversationView() {
               </li>
             ))}
           </ul>
-        </div>
-      )}
-
-      {isFrozen && (
-        <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-          Esta conversación está congelada. Podés leer el historial pero no agregar mensajes.
         </div>
       )}
 
@@ -214,8 +223,7 @@ export function ConversationView() {
             conversation.messages.map((msg, i) => (
               <div key={`${msg.timestamp}-${i}`}>
                 <MessageBubble turn={msg} corpus={corpus} />
-                {!isFrozen &&
-                  msg.role === "assistant" &&
+                {msg.role === "assistant" &&
                   msg.proposedDraft &&
                   !appliedDrafts[msg.proposedDraft.clauseRef] && (
                     <div className="ml-0 max-w-[85%]">
@@ -235,36 +243,32 @@ export function ConversationView() {
           )}
         </div>
 
-        {!isFrozen && (
-          <>
-            <SuggestionChips
-              suggestions={chipSuggestions}
-              onSelect={submitQuery}
-              disabled={loading}
-            />
-            <form onSubmit={handleSubmit} className="flex gap-2 border-t border-slate-200 p-4">
-              <label htmlFor="chat-input" className="sr-only">
-                Escribir consulta
-              </label>
-              <input
-                id="chat-input"
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Escribí tu consulta en lenguaje natural…"
-                disabled={loading}
-                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-bank-navy focus:outline-none focus:ring-1 focus:ring-bank-navy disabled:bg-slate-50"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || loading}
-                className="rounded-lg bg-bank-navy px-4 py-2 text-sm font-medium text-white hover:bg-bank-navy/90 disabled:opacity-50"
-              >
-                Enviar
-              </button>
-            </form>
-          </>
-        )}
+        <SuggestionChips
+          suggestions={chipSuggestions}
+          onSelect={submitQuery}
+          disabled={loading}
+        />
+        <form onSubmit={handleSubmit} className="flex gap-2 border-t border-slate-200 p-4">
+          <label htmlFor="chat-input" className="sr-only">
+            Escribir consulta
+          </label>
+          <input
+            id="chat-input"
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Escribí tu consulta en lenguaje natural…"
+            disabled={loading}
+            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-bank-navy focus:outline-none focus:ring-1 focus:ring-bank-navy disabled:bg-slate-50"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            className="rounded-lg bg-bank-navy px-4 py-2 text-sm font-medium text-white hover:bg-bank-navy/90 disabled:opacity-50"
+          >
+            Enviar
+          </button>
+        </form>
       </div>
     </div>
   );

@@ -188,7 +188,7 @@ export function RequestForm() {
         serviceSubtype: serviceSubtype || undefined,
         monthlyAmount: monthlyAmount.trim() || undefined,
         totalAmount: totalAmount.trim() || undefined,
-        currency: documentOrigin === "ModeloDelProveedor" ? currency : undefined,
+        currency,
         startDate,
         endDate,
         uploadedFileName: uploadedFileName || undefined,
@@ -535,7 +535,7 @@ export function RequestForm() {
               </div>
               <div>
                 <label htmlFor="service-subtype" className={labelClass}>
-                  Tipo de servicio (SaaS / Desarrollo)
+                  Tipo de servicio
                 </label>
                 <select
                   id="service-subtype"
@@ -568,6 +568,23 @@ export function RequestForm() {
                     placeholder="0"
                   />
                 </div>
+              </div>
+              <div>
+                <label htmlFor="currency-standard" className={labelClass}>
+                  Moneda
+                </label>
+                <select
+                  id="currency-standard"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className={inputClass}
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label htmlFor="start-date-standard" className={labelClass}>

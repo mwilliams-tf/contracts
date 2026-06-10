@@ -1,14 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
 import { FictitiousDataBadge } from "../components/FictitiousDataBadge";
 import { createConversation, loadInbox } from "../lib/conversations";
-import { getActiveUser, getActiveUserId } from "../lib/session";
+import { getActiveUser } from "../lib/session";
 import { useCorpus } from "../lib/useCorpus";
 import { ConversationList } from "./components/ConversationList";
 
-export function Inbox() {
+interface InboxProps {
+  userId: string | null;
+}
+
+export function Inbox({ userId }: InboxProps) {
   const navigate = useNavigate();
   const corpus = useCorpus();
-  const userId = getActiveUserId();
   const user = getActiveUser(corpus.users);
   const conversations = userId ? loadInbox(userId) : [];
 

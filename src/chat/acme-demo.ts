@@ -1,4 +1,5 @@
 import type { ChatAnswer, ChatContext, Citation, Source } from "../models";
+import { isAcmeAnchored, isAcmeConversation } from "./conversation-context";
 import { detectIntent, finalizeAnswer, toCitation } from "./engine";
 
 /** Guion demo Acme — prioridad fija cuando la conversación es sobre Acme */
@@ -41,14 +42,7 @@ function normalize(text: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function buildSearchText(query: string, ctx: ChatContext): string {
-  const prior = ctx.priorMessages
-    ?.filter((m) => m.role === "user")
-    .slice(-3)
-    .map((m) => m.text)
-    .join(" ");
-  return prior ? `${prior} ${query}` : query;
-}
+export { isAcmeConversation };
 
 export function mentionsAcme(text: string): boolean {
   return normalize(text).includes("acme");
@@ -58,6 +52,7 @@ export function resolveAcmeContractId(ctx: ChatContext): string {
   if (ctx.focusContractId) {
     const focus = ctx.corpus.contracts.find((c) => c.id === ctx.focusContractId);
     if (focus && normalize(focus.provider.name).includes("acme")) return focus.id;
+    if (isAcmeAnchored(ctx)) return ctx.focusContractId;
   }
   const contract = ctx.corpus.contracts.find(
     (c) =>
@@ -73,57 +68,39 @@ function resolveCitations(sourceIds: string[], ctx: ChatContext): Citation[] {
     .map(toCitation);
 }
 
-export function isAcmeConversation(query: string, ctx: ChatContext): boolean {
-  if (ctx.conversationType === "anchored" && ctx.focusContractId) {
-    const focus = ctx.corpus.contracts.find((c) => c.id === ctx.focusContractId);
-    if (
-      focus &&
-      (normalize(focus.provider.name).includes("acme") ||
-        normalize(focus.title).includes("acme"))
-    ) {
-      return true;
-    }
-  }
-
-  const cq = normalize(query);
-  const sq = normalize(buildSearchText(query, ctx));
-  if (cq.includes("stanley")) return false;
-  return cq.includes("acme") || (sq.includes("acme") && !sq.includes("stanley"));
-}
-
 export function matchAcmeDemoQuestion(
   query: string,
   ctx: ChatContext,
 ): AcmeDemoQuestionId | null {
   if (!isAcmeConversation(query, ctx)) return null;
 
-  const q = normalize(buildSearchText(query, ctx));
+  const cq = normalize(query);
 
   const isFirmantes =
-    q.includes("firmante") ||
-    q.includes("firmado") ||
-    q.includes("firma") ||
-    q.includes("apoderado") ||
-    q.includes("quien falta");
+    cq.includes("firmante") ||
+    cq.includes("firmado") ||
+    cq.includes("firma") ||
+    cq.includes("apoderado") ||
+    cq.includes("quien falta");
 
   const isMails =
-    q.includes("mail") ||
-    q.includes("correo") ||
-    q.includes("intercambio");
+    cq.includes("mail") ||
+    cq.includes("correo") ||
+    cq.includes("intercambio");
 
   const isVencimiento =
-    q.includes("venc") ||
-    q.includes("termina") ||
-    q.includes("finaliza") ||
-    q.includes("renovacion") ||
-    q.includes("vigencia") ||
-    q.includes("plazo");
+    cq.includes("venc") ||
+    cq.includes("termina") ||
+    cq.includes("finaliza") ||
+    cq.includes("renovacion") ||
+    cq.includes("vigencia") ||
+    cq.includes("plazo");
 
   const isEstado =
-    q.includes("estado") ||
-    q.includes("situacion") ||
-    q.includes("como esta") ||
-    q.includes("en que esta");
+    cq.includes("estado") ||
+    cq.includes("situacion") ||
+    cq.includes("como esta") ||
+    cq.includes("en que esta");
 
   if (isFirmantes) return "acme-firmantes";
   if (isMails) return "acme-mails";

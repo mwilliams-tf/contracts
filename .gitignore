@@ -11,3 +11,8 @@ Thumbs.db
 *.swp
 coverage/
 .vite/
+.ux-assessments/
+.lighthouseci/
+.playwright-browsers/
+backstop_data/bitmaps_test/
+backstop_data/html_report/

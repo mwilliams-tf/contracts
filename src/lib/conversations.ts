@@ -55,11 +55,19 @@ function seedInbox(userId: string): Conversation[] {
   return sortInbox([...seeds, ...extra]);
 }
 
+function assertOwner(conversation: Conversation, userId: string): Conversation | null {
+  return conversation.userId === userId ? conversation : null;
+}
+
+function filterOwned(conversations: Conversation[], userId: string): Conversation[] {
+  return conversations.filter((c) => c.userId === userId);
+}
+
 export function loadInbox(userId: string): Conversation[] {
   try {
     const raw = localStorage.getItem(conversationsKey(userId));
     if (raw) {
-      const parsed = JSON.parse(raw) as Conversation[];
+      const parsed = filterOwned(JSON.parse(raw) as Conversation[], userId);
       return sortInbox(parsed);
     }
   } catch {
@@ -80,14 +88,18 @@ export function loadInbox(userId: string): Conversation[] {
 }
 
 export function saveInbox(userId: string, conversations: Conversation[]): void {
-  localStorage.setItem(conversationsKey(userId), JSON.stringify(conversations));
+  localStorage.setItem(
+    conversationsKey(userId),
+    JSON.stringify(filterOwned(conversations, userId)),
+  );
 }
 
 export function getConversation(
   userId: string,
   conversationId: string,
 ): Conversation | null {
-  return loadInbox(userId).find((c) => c.id === conversationId) ?? null;
+  const conversation = loadInbox(userId).find((c) => c.id === conversationId) ?? null;
+  return conversation ? assertOwner(conversation, userId) : null;
 }
 
 export function createConversation(
@@ -134,8 +146,8 @@ export function appendTurn(
   }
 
   const conversation = inbox[index];
-  if (conversation.status === "frozen") {
-    return conversation;
+  if (conversation.userId !== userId) {
+    throw new Error("Conversación no pertenece a la usuaria activa");
   }
 
   const updated: Conversation = {

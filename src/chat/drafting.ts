@@ -1,6 +1,7 @@
 import type { ChatContext, DraftProposal } from "../models";
-import { resolveAcmeContractId } from "./acme-demo";
+import { isStanleyConversation, threadMentionsClausula9 } from "./conversation-context";
 import { resolveStanleyContractId } from "./stanley-demo";
+import { resolveAcmeContractId } from "./acme-demo";
 
 function normalize(text: string): string {
   return text
@@ -21,40 +22,34 @@ const REDACTION_KEYWORDS = [
   "propone redaccion",
   "propone redacción",
   "contrapropuesta",
+  "solucion",
+  "propones",
+  "propone",
+  "propuesta",
 ];
 
-export function isDraftRequest(query: string): boolean {
+export function isDraftRequest(query: string, ctx?: ChatContext): boolean {
   const q = normalize(query);
-  return REDACTION_KEYWORDS.some((kw) => q.includes(kw));
+  if (REDACTION_KEYWORDS.some((kw) => q.includes(kw))) return true;
+  if (ctx && q.includes("esa clausula") && threadMentionsClausula9(ctx)) return true;
+  return false;
 }
 
 export function proposeDraft(query: string, ctx: ChatContext): DraftProposal | null {
-  if (!isDraftRequest(query)) return null;
+  if (!isStanleyConversation(query, ctx)) return null;
+  if (!isDraftRequest(query, ctx)) return null;
 
-  const contractId =
-    ctx.focusContractId ??
-    (normalize(query).includes("stanley")
-      ? resolveStanleyContractId(ctx)
-      : resolveAcmeContractId(ctx));
-
-  const q = normalize(query);
-  const clauseRef =
-    q.includes("clausula 9") || q.includes("cláusula 9") ? "Cláusula 9" : "Cláusula 9";
-
-  const basedOn: string[] = [];
-  if (normalize(query).includes("acme") || ctx.conversationType === "anchored") {
-    basedOn.push(resolveAcmeContractId(ctx));
-  }
+  const contractId = resolveStanleyContractId(ctx);
 
   return {
     contractId,
-    clauseRef,
+    clauseRef: "Cláusula 9",
     proposedText:
       "Limitación de responsabilidad (Cláusula 9 — redacción propuesta):\n\n" +
       "Salvo dolo o culpa grave, la responsabilidad total acumulada del Proveedor no excederá el veinte por ciento (20%) del fee anual del contrato. " +
       "Se excluyen expresamente lucro cesante e indirectos, salvo pérdida de datos personales por incumplimiento de medidas de seguridad acordadas. " +
       "El Proveedor mantendrá cobertura de seguro de responsabilidad civil por un monto no inferior al fee anual. " +
       "Esta redacción incorpora el precedente de negociación del contrato Acme (priorización de fuente reciente y carve-out para datos personales).",
-    basedOnContractIds: basedOn.filter((id) => id !== contractId),
+    basedOnContractIds: [resolveAcmeContractId(ctx)].filter((id) => id !== contractId),
   };
 }

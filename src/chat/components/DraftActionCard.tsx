@@ -21,8 +21,8 @@ export function DraftActionCard({
       <p className="mt-2 whitespace-pre-wrap text-slate-800">{proposal.proposedText}</p>
       {appliedDraft ? (
         <p className="mt-3 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-          Borrador local v{appliedDraft.version} creado ({appliedDraft.clauseRef}). Acción
-          simulada — no modifica fuentes reales.
+          {proposal.clauseRef} modificada en el documento (v{appliedDraft.version}) con control
+          de cambios habilitado.
         </p>
       ) : (
         <button
@@ -31,12 +31,9 @@ export function DraftActionCard({
           disabled={applying}
           className="mt-3 rounded-lg bg-bank-navy px-3 py-1.5 text-xs font-medium text-white hover:bg-bank-navy/90 disabled:opacity-50"
         >
-          {applying ? "Aplicando…" : "Aplicar al borrador"}
+          {applying ? "Aplicando…" : "Aplicar al documento"}
         </button>
       )}
-      <p className="mt-2 text-xs text-amber-800">
-        Acción simulada — no modifica fuentes reales; en producción → .docx en Drive
-      </p>
     </div>
   );
 }

@@ -89,7 +89,7 @@ export default function App() {
           <Route path="/" element={<Board />} />
           <Route path="/contratos/:id" element={<ContractDetail />} />
           <Route path="/contratos/:id/repositorio" element={<ContractRepository />} />
-          <Route path="/chat/*" element={<ChatView />} />
+          <Route path="/chat/*" element={<ChatView key={userId ?? "none"} userId={userId} />} />
           <Route path="/solicitud" element={<RequestForm />} />
         </Routes>
       </main>

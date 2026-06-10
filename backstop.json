@@ -1,5 +1,5 @@
 {
-  "id": "my-project",
+  "id": "clm-chat-mvp",
   "viewports": [
     {
       "label": "desktop",
@@ -19,8 +19,22 @@
   ],
   "scenarios": [
     {
-      "label": "Homepage",
-      "url": "http://localhost:3000/",
+      "label": "Tablero",
+      "url": "http://127.0.0.1:5173/",
+      "delay": 1000,
+      "misMatchThreshold": 0.1,
+      "requireSameDimensions": true
+    },
+    {
+      "label": "Chat IA",
+      "url": "http://127.0.0.1:5173/chat",
+      "delay": 1000,
+      "misMatchThreshold": 0.1,
+      "requireSameDimensions": true
+    },
+    {
+      "label": "Solicitud",
+      "url": "http://127.0.0.1:5173/solicitud",
       "delay": 1000,
       "misMatchThreshold": 0.1,
       "requireSameDimensions": true
@@ -40,6 +54,5 @@
   "asyncCaptureLimit": 5,
   "asyncCompareLimit": 50,
   "debug": false,
-  "debugWindow": false,
-  "_README": "Configure this file for your project: update 'id', 'scenarios[].url' to match your dev server, and add routes you want to visually regression test. Run: npx backstop test"
+  "debugWindow": false
 }

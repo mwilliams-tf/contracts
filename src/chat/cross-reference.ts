@@ -1,7 +1,8 @@
 import type { ChatAnswer, ChatContext, Citation, Source } from "../models";
+import { isStanleyAnchored } from "./conversation-context";
 import { tryAcmeDemoAnswer, resolveAcmeContractId } from "./acme-demo";
 import { detectIntent, finalizeAnswer, toCitation } from "./engine";
-import { resolveStanleyContractId } from "./stanley-demo";
+import { resolveStanleyContractId, resolveStanleyTitle } from "./stanley-demo";
 
 function normalize(text: string): string {
   return text
@@ -56,26 +57,39 @@ export function tryCrossReferenceAnswer(
   if (!mentionsCrossReference(query)) return null;
   if (ctx.conversationType !== "anchored" || !ctx.focusContractId) return null;
 
-  const principalId = ctx.focusContractId;
+  const principalId = resolveStanleyContractId(ctx);
   const referencedIds = detectReferencedContractIds(query, ctx);
 
   if (referencedIds.length === 0) {
     return null;
   }
 
-  const principal = ctx.corpus.contracts.find((c) => c.id === principalId);
   const referenced = referencedIds
     .map((id) => ctx.corpus.contracts.find((c) => c.id === id))
     .filter(Boolean);
 
-  if (!principal || referenced.length === 0) {
+  if (!isStanleyAnchored(ctx) && !ctx.corpus.contracts.find((c) => c.id === principalId)) {
     return finalizeAnswer(
       {
         text: "No encontré un precedente comparable en el corpus ficticio para esa consulta. Probá mencionar un contrato concreto (p. ej. Acme o Stanley).",
         citations: [],
-        matchedContractIds: principal ? [principal.id] : [],
+        matchedContractIds: [],
         intent: detectIntent(query, ctx.priorMessages),
-        principalContractId: principal?.id ?? null,
+        principalContractId: null,
+        referencedContractIds: [],
+      },
+      ctx,
+    );
+  }
+
+  if (referenced.length === 0) {
+    return finalizeAnswer(
+      {
+        text: "No encontré un precedente comparable en el corpus ficticio para esa consulta. Probá mencionar un contrato concreto (p. ej. Acme o Stanley).",
+        citations: [],
+        matchedContractIds: [principalId],
+        intent: detectIntent(query, ctx.priorMessages),
+        principalContractId: principalId,
         referencedContractIds: [],
       },
       ctx,
@@ -86,18 +100,16 @@ export function tryCrossReferenceAnswer(
   if (referencedIds.includes(acmeId)) {
     const acmeAnswer = tryAcmeDemoAnswer("vencimiento acme", ctx);
     const acmeCitations = acmeAnswer?.citations ?? resolveCitations(["src-002"], ctx);
+    const principalTitle = resolveStanleyTitle(ctx);
 
     return finalizeAnswer(
       {
         text:
-          `Sobre el contrato principal «${principal.title}», traigo el precedente de Acme:\n\n` +
+          `Sobre el contrato principal «${principalTitle}», traigo el precedente de Acme:\n\n` +
           `En Acme resolvimos el conflicto de vencimiento priorizando la fuente más reciente (01/03/2027 prevalece sobre el mail anterior del proveedor). ` +
           `Podés aplicar el mismo criterio de recencia y negociación de limitación de responsabilidad en Stanley.\n\n` +
           `Referencia Acme: ${acmeAnswer?.text ?? "vencimiento confirmado al 01/03/2027 con firma del Banco pendiente (María López)."}`,
-        citations: [
-          ...resolveCitations(["src-007"], ctx),
-          ...acmeCitations,
-        ],
+        citations: [...resolveCitations(["src-007"], ctx), ...acmeCitations],
         matchedContractIds: [principalId, acmeId],
         intent: "clausula",
         principalContractId: principalId,
