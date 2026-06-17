@@ -12,6 +12,10 @@ export function loadStoredRequests(): StoredRequest[] {
   }
 }
 
+export function getStoredRequestById(id: string): StoredRequest | undefined {
+  return loadStoredRequests().find((request) => request.id === id);
+}
+
 export function saveStoredRequest(request: StoredRequest): void {
   const existing = loadStoredRequests();
   existing.push(request);
@@ -42,6 +46,24 @@ export function createRequest(data: {
   startDate?: string;
   endDate?: string;
   uploadedFileName?: string;
+  templateId?: string;
+  templateFileName?: string;
+  generatedDraftName?: string;
+  generatedAnnexName?: string;
+  annexTemplateFileName?: string;
+  driveFolderPath?: string;
+  observations?: string;
+  serviceDescription?: string;
+  softwareName?: string;
+  serviceClassification?: string;
+  serviceNature?: string;
+  serviceObjective?: string;
+  serviceScope?: string;
+  assignedResources?: string;
+  serviceSchedule?: string;
+  slaAvailability?: string;
+  minHoursMonthly?: string;
+  maxHoursMonthly?: string;
 }): StoredRequest {
   return {
     id: `req-${Date.now()}`,
@@ -65,5 +87,23 @@ export function createRequest(data: {
     startDate: data.startDate,
     endDate: data.endDate,
     uploadedFileName: data.uploadedFileName,
+    templateId: data.templateId,
+    templateFileName: data.templateFileName,
+    generatedDraftName: data.generatedDraftName,
+    generatedAnnexName: data.generatedAnnexName,
+    annexTemplateFileName: data.annexTemplateFileName,
+    driveFolderPath: data.driveFolderPath,
+    observations: data.observations,
+    serviceDescription: data.serviceDescription,
+    softwareName: data.softwareName,
+    serviceClassification: data.serviceClassification,
+    serviceNature: data.serviceNature,
+    serviceObjective: data.serviceObjective,
+    serviceScope: data.serviceScope,
+    assignedResources: data.assignedResources,
+    serviceSchedule: data.serviceSchedule,
+    slaAvailability: data.slaAvailability,
+    minHoursMonthly: data.minHoursMonthly,
+    maxHoursMonthly: data.maxHoursMonthly,
   };
 }

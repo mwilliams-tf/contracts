@@ -169,6 +169,7 @@ export function applyWorkflowTransition(
   users: User[],
   workflowStates: WorkflowState[],
   note?: string,
+  attachment?: { id: string; fileName: string },
 ): { ok: true } | { ok: false; error: string } {
   const action = findTransitionAction(contract.stateId, actionId);
   if (!action) {
@@ -185,10 +186,18 @@ export function applyWorkflowTransition(
   }
 
   const today = new Date().toISOString().split("T")[0];
+  let historyNote = note?.trim() || undefined;
+  if (attachment) {
+    const attachmentNote = `Documento adjunto en Drive: ${attachment.fileName}`;
+    historyNote = historyNote ? `${historyNote} — ${attachmentNote}` : attachmentNote;
+  }
+
   const historyEntry: StateHistoryEntry = {
     stateId: action.toStateId,
     date: today,
-    note: note?.trim() || undefined,
+    note: historyNote,
+    attachmentId: attachment?.id,
+    attachmentFileName: attachment?.fileName,
   };
 
   const newHistory = [...contract.stateHistory, historyEntry];

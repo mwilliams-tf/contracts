@@ -4,6 +4,7 @@ import { formatDate, getContractById, isExpired } from "../lib/corpus";
 import { openOrCreateAnchored } from "../lib/conversations";
 import { useCorpus } from "../lib/useCorpus";
 import { getActiveUser, getActiveUserId } from "../lib/session";
+import { downloadWorkflowDocument, getWorkflowDocument } from "../lib/workflow-documents";
 import { DocumentOriginBadge } from "./components/DocumentOriginBadge";
 import { StateBadge } from "./components/StateBadge";
 import { WorkflowActions } from "./components/WorkflowActions";
@@ -192,6 +193,20 @@ export function ContractDetail() {
                   <p className="text-sm text-slate-500">{formatDate(entry.date)}</p>
                   {entry.note && (
                     <p className="mt-1 text-sm text-slate-600">{entry.note}</p>
+                  )}
+                  {entry.attachmentId && entry.attachmentFileName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void getWorkflowDocument(entry.attachmentId!).then((doc) => {
+                          if (doc) downloadWorkflowDocument(doc);
+                        });
+                      }}
+                      className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-bank-navy hover:underline"
+                    >
+                      📄 {entry.attachmentFileName}
+                      <span className="font-normal text-slate-500">(Drive simulado)</span>
+                    </button>
                   )}
                 </li>
               );

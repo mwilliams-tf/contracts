@@ -19,6 +19,8 @@ export interface StateHistoryEntry {
   stateId: string;
   date: string;
   note?: string;
+  attachmentId?: string;
+  attachmentFileName?: string;
 }
 
 export interface Contract {
@@ -228,4 +230,22 @@ export interface StoredRequest {
   startDate?: string;
   endDate?: string;
   uploadedFileName?: string;
+  templateId?: string;
+  templateFileName?: string;
+  generatedDraftName?: string;
+  generatedAnnexName?: string;
+  annexTemplateFileName?: string;
+  driveFolderPath?: string;
+  observations?: string;
+  serviceDescription?: string;
+  softwareName?: string;
+  serviceClassification?: string;
+  serviceNature?: string;
+  serviceObjective?: string;
+  serviceScope?: string;
+  assignedResources?: string;
+  serviceSchedule?: string;
+  slaAvailability?: string;
+  minHoursMonthly?: string;
+  maxHoursMonthly?: string;
 }

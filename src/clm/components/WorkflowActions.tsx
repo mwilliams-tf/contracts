@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { EnrichedContract, User, WorkflowState } from "../../models";
 import {
+  allowsWorkflowAttachment,
   STATE_RESPONSIBLE_AREA,
   TERMINAL_STATE_IDS,
   getAvailableActions,
 } from "../../lib/workflow";
+import {
+  createWorkflowDocumentId,
+  saveWorkflowDocument,
+} from "../../lib/workflow-documents";
 import { applyWorkflowTransition } from "../../lib/workflow-storage";
 
 interface WorkflowActionsProps {
@@ -28,7 +33,10 @@ export function WorkflowActions({
   workflowStates,
   onTransition,
 }: WorkflowActionsProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState("");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -36,6 +44,7 @@ export function WorkflowActions({
   const responsible = STATE_RESPONSIBLE_AREA[contract.stateId] ?? "—";
   const isTerminal = TERMINAL_STATE_IDS.has(contract.stateId);
   const noteRequiredForActions = actions.filter((action) => action.requiresNote);
+  const canAttachDocument = allowsWorkflowAttachment(contract.stateId);
 
   if (isTerminal) {
     return (
@@ -49,7 +58,19 @@ export function WorkflowActions({
     );
   }
 
-  function executeTransition(actionId: string) {
+  function handleFileChange(file: File | null) {
+    if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "docx" && ext !== "pdf") {
+      setError("Solo se aceptan archivos .docx o .pdf.");
+      return;
+    }
+    setPendingFile(file);
+    setUploadedFileName(file.name);
+    setError("");
+  }
+
+  async function executeTransition(actionId: string) {
     if (!user) {
       setError("Seleccioná una usuaria en la barra superior para actuar.");
       return;
@@ -64,24 +85,41 @@ export function WorkflowActions({
     setSubmitting(true);
     setError("");
 
-    const result = applyWorkflowTransition(
-      contract,
-      actionId,
-      user,
-      users,
-      workflowStates,
-      note.trim() || undefined,
-    );
+    try {
+      let attachment: { id: string; fileName: string } | undefined;
+      if (pendingFile && canAttachDocument) {
+        const id = createWorkflowDocumentId(contract.id);
+        await saveWorkflowDocument(id, contract.id, pendingFile);
+        attachment = { id, fileName: pendingFile.name };
+      }
 
-    setSubmitting(false);
+      const result = applyWorkflowTransition(
+        contract,
+        actionId,
+        user,
+        users,
+        workflowStates,
+        note.trim() || undefined,
+        attachment,
+      );
 
-    if (!result.ok) {
-      setError(result.error);
-      return;
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      setNote("");
+      setPendingFile(null);
+      setUploadedFileName("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      onTransition?.();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No se pudo adjuntar el documento. Intentá de nuevo.",
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    setNote("");
-    onTransition?.();
   }
 
   return (
@@ -108,8 +146,8 @@ export function WorkflowActions({
         </p>
       ) : (
         <>
-          {actions.length > 0 && (
-            <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+          <div className="mt-4 space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+            <div>
               <label htmlFor="workflow-note" className="block text-sm font-medium text-slate-700">
                 Observación
                 {noteRequiredForActions.length > 0 ? (
@@ -130,11 +168,62 @@ export function WorkflowActions({
                 rows={3}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Agregá contexto sobre la decisión, cambios o motivo del rechazo…"
+                placeholder="Observaciones del proveedor, cambios del área o comentarios de Legales…"
                 className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-bank-navy focus:outline-none focus:ring-1 focus:ring-bank-navy"
               />
             </div>
-          )}
+
+            {canAttachDocument && (
+              <div>
+                <span className="block text-sm font-medium text-slate-700">
+                  Documento adjunto{" "}
+                  <span className="font-normal text-slate-500">(opcional — se carga en Drive)</span>
+                </span>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleFileChange(e.dataTransfer.files[0] ?? null);
+                  }}
+                  className="mt-2 flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm transition hover:border-bank-navy/40 hover:bg-slate-100"
+                >
+                  <svg
+                    className="h-8 w-8 shrink-0 text-slate-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"
+                    />
+                  </svg>
+                  {uploadedFileName ? (
+                    <span className="font-medium text-bank-navy">{uploadedFileName}</span>
+                  ) : (
+                    <span className="text-slate-600">
+                      Adjuntá el documento con la objeción, contrapropuesta o versión revisada
+                      (.docx, .pdf)
+                    </span>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    className="hidden"
+                    onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
             {actions.map((action) => (
@@ -144,7 +233,7 @@ export function WorkflowActions({
                 disabled={submitting}
                 onClick={() => {
                   setError("");
-                  executeTransition(action.id);
+                  void executeTransition(action.id);
                 }}
                 className={`rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition disabled:opacity-50 ${variantClass[action.variant]}`}
               >
@@ -160,7 +249,8 @@ export function WorkflowActions({
           El proveedor revisa el borrador <strong>fuera del sistema</strong> (mail u otro canal).
           El área solicitante registra la respuesta recibida. Si hay conformidad, el expediente
           pasa a Legales para revisión final y firma. Si hay objeción o cambios propuestos, vuelve
-          a Legales para ajustes; luego el circuito continúa área solicitante → proveedor.
+          a Legales para ajustes; podés adjuntar el documento del proveedor al registrar la
+          objeción.
         </p>
       )}
 

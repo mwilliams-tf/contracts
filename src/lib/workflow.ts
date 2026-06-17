@@ -12,6 +12,17 @@ export interface WorkflowAction {
 
 export const TERMINAL_STATE_IDS = new Set(["st-rechazado", "st-finalizado"]);
 
+/** Estados donde no se puede adjuntar documento al informar un cambio u objeción */
+export const NO_WORKFLOW_ATTACHMENT_STATE_IDS = new Set([
+  "st-solicitado",
+  "st-pendiente-firma",
+  "st-finalizado",
+]);
+
+export function allowsWorkflowAttachment(stateId: string): boolean {
+  return !NO_WORKFLOW_ATTACHMENT_STATE_IDS.has(stateId);
+}
+
 export const STATE_RESPONSIBLE_AREA: Record<string, string> = {
   "st-solicitado": "Legales",
   "st-rechazado": "—",

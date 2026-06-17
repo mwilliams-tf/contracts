@@ -1,6 +1,7 @@
 import type { EnrichedContract } from "../models";
 import { formatContractCode } from "./contract-display";
 import type { StoredContractDocumentMeta } from "./document-store";
+import type { WorkflowDocumentMeta } from "./workflow-documents";
 
 export type RepositoryEntryType = "folder" | "pdf" | "docx" | "other";
 
@@ -13,6 +14,8 @@ export interface RepositoryEntry {
   simulatedLink?: string;
   /** Descarga real desde IndexedDB (solicitudes con adjunto) */
   contractDocument?: boolean;
+  /** Descarga real — adjunto de workflow (objeción/cambio) */
+  workflowDocumentId?: string;
 }
 
 function fileTypeFromName(name: string): RepositoryEntryType {
@@ -43,9 +46,22 @@ export function uploadedDocumentToEntry(
   };
 }
 
+export function workflowDocumentToEntry(doc: WorkflowDocumentMeta): RepositoryEntry {
+  return {
+    id: doc.id,
+    name: doc.fileName,
+    entryType: fileTypeFromName(doc.fileName),
+    modifiedDate: doc.uploadedAt,
+    size: formatSize(doc.size),
+    workflowDocumentId: doc.id,
+  };
+}
+
 export function getContractRepositoryEntries(
   contract: EnrichedContract,
   uploadedDoc?: StoredContractDocumentMeta | null,
+  generatedDraftName?: string | null,
+  workflowDocuments?: WorkflowDocumentMeta[],
 ): RepositoryEntry[] {
   const code = formatContractCode(contract.id);
   const entries: RepositoryEntry[] = [
@@ -83,13 +99,17 @@ export function getContractRepositoryEntries(
   } else if (contract.documents.length === 0) {
     entries.push({
       id: "mock-borrador",
-      name: `${code}_Borrador_Inicial.docx`,
+      name: generatedDraftName ?? `${code}_Borrador.docx`,
       entryType: "docx",
       modifiedDate: contract.startDate,
       size: formatSize(245_000),
       simulatedLink: `#/sim/repo/${contract.id}/borrador`,
     });
   }
+
+  workflowDocuments?.forEach((doc) => {
+    entries.push(workflowDocumentToEntry(doc));
+  });
 
   if (contract.signatureDate) {
     entries.push({

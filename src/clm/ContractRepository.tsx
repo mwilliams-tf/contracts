@@ -9,7 +9,14 @@ import {
   getContractDocument,
   type StoredContractDocumentMeta,
 } from "../lib/document-store";
+import {
+  downloadWorkflowDocument,
+  getWorkflowDocument,
+  listWorkflowDocuments,
+  type WorkflowDocumentMeta,
+} from "../lib/workflow-documents";
 import { getContractRepositoryEntries, type RepositoryEntry } from "../lib/repository";
+import { getStoredRequestById } from "../lib/requests";
 
 function EntryIcon({ entry }: { entry: RepositoryEntry }) {
   if (entry.entryType === "folder") {
@@ -39,10 +46,12 @@ export function ContractRepository() {
   const contract = id ? getContractById(corpus, id) : undefined;
   const [search, setSearch] = useState("");
   const [uploadedDoc, setUploadedDoc] = useState<StoredContractDocumentMeta | null>(null);
+  const [workflowDocs, setWorkflowDocs] = useState<WorkflowDocumentMeta[]>([]);
 
   useEffect(() => {
     if (!contract) {
       setUploadedDoc(null);
+      setWorkflowDocs([]);
       return;
     }
 
@@ -55,6 +64,9 @@ export function ContractRepository() {
       } else {
         setUploadedDoc(null);
       }
+    });
+    void listWorkflowDocuments(contract.id).then((docs) => {
+      if (!cancelled) setWorkflowDocs(docs);
     });
 
     return () => {
@@ -74,14 +86,27 @@ export function ContractRepository() {
   }
 
   async function handleEntryClick(entry: RepositoryEntry) {
-    if (!entry.contractDocument || !contract) return;
-    const doc = await getContractDocument(contract.id);
-    if (doc) downloadContractDocument(doc);
+    if (!contract) return;
+    if (entry.contractDocument) {
+      const doc = await getContractDocument(contract.id);
+      if (doc) downloadContractDocument(doc);
+      return;
+    }
+    if (entry.workflowDocumentId) {
+      const doc = await getWorkflowDocument(entry.workflowDocumentId);
+      if (doc) downloadWorkflowDocument(doc);
+    }
   }
 
   const breadcrumb = contractRepositoryPath(contract);
   const folderName = `${formatContractCode(contract.id)} - ${contract.service}`;
-  const entries = getContractRepositoryEntries(contract, uploadedDoc);
+  const storedRequest = getStoredRequestById(contract.id);
+  const entries = getContractRepositoryEntries(
+    contract,
+    uploadedDoc,
+    storedRequest?.generatedDraftName,
+    workflowDocs,
+  );
   const filtered = search.trim()
     ? entries.filter((e) => e.name.toLowerCase().includes(search.toLowerCase()))
     : entries;
@@ -96,7 +121,9 @@ export function ContractRepository() {
           <h1 className="mt-2 text-2xl font-bold text-bank-navy">Repositorio de contratos</h1>
           <p className="mt-1 text-sm text-slate-600">
             Drive simulado · carpeta del contrato {formatContractCode(contract.id)}
-            {uploadedDoc ? " · incluye adjunto de solicitud" : ""}
+            {uploadedDoc || workflowDocs.length > 0
+          ? " · incluye archivos cargados localmente"
+          : ""}
           </p>
         </div>
         <FictitiousDataBadge />
@@ -195,12 +222,12 @@ export function ContractRepository() {
                   filtered.map((entry) => (
                     <tr key={entry.id} className="hover:bg-slate-50">
                       <td className="px-4 py-2.5">
-                        {entry.contractDocument ? (
+                        {entry.contractDocument || entry.workflowDocumentId ? (
                           <button
                             type="button"
                             onClick={() => void handleEntryClick(entry)}
                             className="flex items-center gap-2 font-medium text-bank-navy hover:underline"
-                            title="Descargar archivo adjunto"
+                            title="Descargar archivo"
                           >
                             <EntryIcon entry={entry} />
                             {entry.name}
@@ -245,8 +272,8 @@ export function ContractRepository() {
       </div>
 
       <p className="text-center text-xs text-slate-500">
-        {uploadedDoc
-          ? "Los archivos de solicitud se guardan localmente (IndexedDB). Integración con Google Drive pendiente (IT)."
+        {uploadedDoc || workflowDocs.length > 0
+          ? "Los archivos adjuntos se guardan localmente (IndexedDB). Integración con Google Drive pendiente (IT)."
           : "Integración con Google Drive pendiente (IT) · contenido ficticio para demostración"}
       </p>
     </div>

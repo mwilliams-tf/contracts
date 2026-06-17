@@ -75,14 +75,23 @@ function storedRequestsToContracts(
         p.name.toLowerCase().includes(req.providerName.toLowerCase()),
       )?.id ?? `prov-req-${index}`;
 
-    const note =
-      req.documentOrigin === "PlantillaPropia"
-        ? req.uploadedFileName
-          ? `Plantilla adjunta — ${req.uploadedFileName}`
-          : `Borrador generado — ${req.applicantName ?? "Solicitante"}`
-        : req.uploadedFileName
-          ? `Enviado a revisión legal — ${req.uploadedFileName}`
-          : "Solicitud creada en prototipo";
+    let note: string;
+    if (req.documentOrigin === "PlantillaPropia") {
+      if (req.generatedDraftName && req.templateFileName) {
+        note = `Borrador generado desde ${req.templateFileName} — ${req.applicantName ?? "Solicitante"}`;
+      } else if (req.uploadedFileName) {
+        note = `Plantilla adjunta — ${req.uploadedFileName}`;
+      } else {
+        note = `Borrador generado — ${req.applicantName ?? "Solicitante"}`;
+      }
+      if (req.observations?.trim()) {
+        note += `. Observaciones del solicitante: ${req.observations.trim()}`;
+      }
+    } else {
+      note = req.uploadedFileName
+        ? `Enviado a revisión legal — ${req.uploadedFileName}`
+        : "Solicitud creada en prototipo";
+    }
 
     return {
       id: req.id,
